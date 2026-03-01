@@ -285,8 +285,10 @@ function NewAppointmentModal({ doctors, onClose, onSuccess }) {
   const [patients, setPatients] = useState([])
   const [searchPatient, setSearchPatient] = useState('')
   const [availableSlots, setAvailableSlots] = useState([])
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
-    doctorId: '',
+    doctorId: user?.doctorId || '',
+    clinicId: user?.clinicId || '',
     patientId: '',
     scheduledDate: new Date().toISOString().split('T')[0],
     scheduledTime: '',

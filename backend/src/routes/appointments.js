@@ -176,7 +176,9 @@ router.post('/', authenticateToken, [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({
+      error: 'Error de validación: ' + errors.array().map(e => `${e.param}: ${e.msg}`).join(', ')
+    });
   }
 
   const {
@@ -211,7 +213,7 @@ router.post('/', authenticateToken, [
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
       [clinicId, doctorId, patientId, parentId, scheduledDate, scheduledTime,
-       duration, type, reason, preVisitInstructions, notes, req.user.id]
+        duration, type, reason, preVisitInstructions, notes, req.user.id]
     );
 
     await logAudit(req.user.id, 'CREATE_APPOINTMENT', 'appointments', result.rows[0].id, null, { patientId, scheduledDate }, req);

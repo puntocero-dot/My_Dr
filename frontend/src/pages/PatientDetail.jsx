@@ -42,6 +42,7 @@ export default function PatientDetail() {
   const [parentRelationship, setParentRelationship] = useState('padre')
   const [activePrescriptions, setActivePrescriptions] = useState([])
   const [notificationSettings, setNotificationSettings] = useState(null)
+  const [showAlertsModal, setShowAlertsModal] = useState(false)
 
   useEffect(() => {
     if (!id || id === 'undefined') {
@@ -119,7 +120,7 @@ export default function PatientDetail() {
   }
 
   const handleConfigureAlerts = () => {
-    alert('Configuración de alertas: Esta funcionalidad le permite definir si desea recibir recordatorios por WhatsApp, Email o Notificaciones Push. Próximamente disponible.');
+    setShowAlertsModal(true);
   }
 
   const formatDate = (dateString) => {
@@ -1124,6 +1125,80 @@ export default function PatientDetail() {
 
             <div className="flex justify-end">
               <button onClick={() => setShowParentModal(false)} className="btn-secondary">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alerts Configuration Modal */}
+      {showAlertsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary-600" />
+                Configurar Alertas
+              </h3>
+              <button
+                onClick={() => setShowAlertsModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-6">
+              Define los medios por los cuales el padre recibirá recordatorios de las tomas de medicamentos.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
+                    <Phone className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">WhatsApp</span>
+                </div>
+                <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" defaultChecked />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">Correo Electrónico</span>
+                </div>
+                <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
+                    <Bell className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">Notificaciones Push</span>
+                </div>
+                <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" defaultChecked />
+              </div>
+            </div>
+
+            <div className="mt-8 flex gap-3">
+              <button
+                onClick={() => setShowAlertsModal(false)}
+                className="flex-1 btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  alert('Configuración guardada exitosamente (Simulado)');
+                  setShowAlertsModal(false);
+                }}
+                className="flex-1 btn-primary"
+              >
+                Guardar
+              </button>
             </div>
           </div>
         </div>

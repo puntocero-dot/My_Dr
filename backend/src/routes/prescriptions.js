@@ -311,7 +311,7 @@ router.post('/log-dose', authenticateToken, [
   try {
     // Get item details to calculate next dose
     const itemResult = await query(
-      'SELECT pi.*, p.frequency, p.patient_id FROM prescription_items pi JOIN prescriptions p ON pi.prescription_id = p.id WHERE pi.id = $1',
+      'SELECT pi.*, pi.frequency, p.patient_id FROM prescription_items pi JOIN prescriptions p ON pi.prescription_id = p.id WHERE pi.id = $1',
       [prescriptionItemId]
     );
 
