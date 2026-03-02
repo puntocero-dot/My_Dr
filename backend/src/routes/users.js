@@ -62,7 +62,39 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     })));
   } catch (error) {
     logger.error('Get users error:', error);
-    res.status(500).json({ error: 'Failed to get users' });
+    res.status(500).json({ error: 'Error al obtener usuarios: ' + error.message });
+  }
+});
+
+// Get doctors list (MUST be before /:id to avoid route conflict)
+router.get('/role/doctors', authenticateToken, requireMedicalStaff, async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT u.id, u.first_name, u.last_name, u.email, u.phone,
+              d.id as doctor_id, d.medical_license, d.specialty, d.clinic_id,
+              c.name as clinic_name
+       FROM users u
+       JOIN doctors d ON u.id = d.user_id
+       LEFT JOIN clinics c ON d.clinic_id = c.id
+       WHERE u.status = 'active'
+       ORDER BY u.last_name, u.first_name`
+    );
+
+    res.json(result.rows.map(d => ({
+      id: d.id,
+      doctorId: d.doctor_id,
+      firstName: d.first_name,
+      lastName: d.last_name,
+      email: d.email,
+      phone: d.phone,
+      medicalLicense: d.medical_license,
+      specialty: d.specialty,
+      clinicId: d.clinic_id,
+      clinicName: d.clinic_name
+    })));
+  } catch (error) {
+    logger.error('Get doctors error:', error);
+    res.status(500).json({ error: 'Error al obtener doctores' });
   }
 });
 
@@ -117,7 +149,9 @@ router.post('/', authenticateToken, requireAdmin, [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ 
+      error: 'Error de validación: ' + errors.array().map(e => `${e.param}: ${e.msg}`).join(', ') 
+    });
   }
 
   const { email, password, firstName, lastName, role, phone, dui, clinicId, medicalLicense, specialty } = req.body;
@@ -167,7 +201,7 @@ router.post('/', authenticateToken, requireAdmin, [
     });
   } catch (error) {
     logger.error('Create user error:', error);
-    res.status(500).json({ error: 'Failed to create user' });
+    res.status(500).json({ error: 'Error al crear usuario: ' + error.message });
   }
 });
 
@@ -240,38 +274,6 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   } catch (error) {
     logger.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user' });
-  }
-});
-
-// Get doctors list
-router.get('/role/doctors', authenticateToken, requireMedicalStaff, async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT u.id, u.first_name, u.last_name, u.email, u.phone,
-              d.id as doctor_id, d.medical_license, d.specialty, d.clinic_id,
-              c.name as clinic_name
-       FROM users u
-       JOIN doctors d ON u.id = d.user_id
-       LEFT JOIN clinics c ON d.clinic_id = c.id
-       WHERE u.status = 'active'
-       ORDER BY u.last_name, u.first_name`
-    );
-
-    res.json(result.rows.map(d => ({
-      id: d.id,
-      doctorId: d.doctor_id,
-      firstName: d.first_name,
-      lastName: d.last_name,
-      email: d.email,
-      phone: d.phone,
-      medicalLicense: d.medical_license,
-      specialty: d.specialty,
-      clinicId: d.clinic_id,
-      clinicName: d.clinic_name
-    })));
-  } catch (error) {
-    logger.error('Get doctors error:', error);
-    res.status(500).json({ error: 'Failed to get doctors' });
   }
 });
 
