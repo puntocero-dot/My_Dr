@@ -1,4 +1,7 @@
+import { lazy, Suspense } from 'react'
 import { usePreferences } from '../context/PreferencesContext'
+
+const Pediatric4DViewer = lazy(() => import('./Pediatric4DViewer'))
 
 export default function GrowthComparison3D({ data, viewMode = 'bars' }) {
   const { convertWeight, convertHeight, getUnitLabel } = usePreferences()
@@ -57,6 +60,31 @@ export default function GrowthComparison3D({ data, viewMode = 'bars' }) {
 
   const maxWeight = Math.max(displayCurrentWeight, displayPreviousWeight || 0, displayIdealWeight) * 1.15
   const maxHeight = Math.max(displayCurrentHeight, displayPreviousHeight || 0, displayIdealHeight) * 1.05
+
+  if (viewMode === '3d') {
+    return (
+      <Suspense fallback={
+        <div className="h-[480px] flex items-center justify-center bg-gradient-to-b from-slate-100 to-slate-200 dark:from-gray-800 dark:to-gray-900 rounded-2xl">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm text-gray-500">Cargando visor 3D...</p>
+          </div>
+        </div>
+      }>
+        <Pediatric4DViewer
+          edadEnMeses={data?.patient?.ageMonths || 24}
+          currentWeight={currentWeight}
+          currentHeight={currentHeight}
+          idealWeight={idealWeight}
+          idealHeight={idealHeight}
+          gender={data?.patient?.gender || 'male'}
+          healthStatus={healthStatus}
+          bmi={bmi}
+          transform3D={transform3D}
+        />
+      </Suspense>
+    )
+  }
 
   if (viewMode === 'silhouette') {
     return (
