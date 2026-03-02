@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { role, status, search } = req.query;
-    
+
     let sql = `
       SELECT u.id, u.email, u.role, u.status, u.first_name, u.last_name, 
              u.phone, u.dui, u.created_at, u.last_login,
@@ -149,8 +149,8 @@ router.post('/', authenticateToken, requireAdmin, [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      error: 'Error de validación: ' + errors.array().map(e => `${e.param}: ${e.msg}`).join(', ') 
+    return res.status(400).json({
+      error: 'Error de validación: ' + errors.array().map(e => `${e.path || e.param || 'campo'}: ${e.msg}`).join(', ')
     });
   }
 
@@ -159,7 +159,15 @@ router.post('/', authenticateToken, requireAdmin, [
   try {
     const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Email already exists' });
+      return res.status(400).json({ error: 'El correo electrónico ya está registrado' });
+    }
+
+    // Check duplicate DUI
+    if (dui) {
+      const existingDui = await query('SELECT id FROM users WHERE dui = $1', [dui]);
+      if (existingDui.rows.length > 0) {
+        return res.status(400).json({ error: 'El número de DUI ya está registrado en otro usuario' });
+      }
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -185,7 +193,7 @@ router.post('/', authenticateToken, requireAdmin, [
     } else if (role === 'secretary') {
       const secResult = await query('INSERT INTO secretaries (user_id) VALUES ($1) RETURNING id', [newUser.id]);
       if (clinicId) {
-        await query('INSERT INTO secretary_clinics (secretary_id, clinic_id) VALUES ($1, $2)', 
+        await query('INSERT INTO secretary_clinics (secretary_id, clinic_id) VALUES ($1, $2)',
           [secResult.rows[0].id, clinicId]);
       }
     }
@@ -201,7 +209,17 @@ router.post('/', authenticateToken, requireAdmin, [
     });
   } catch (error) {
     logger.error('Create user error:', error);
-    res.status(500).json({ error: 'Error al crear usuario: ' + error.message });
+    // Handle PostgreSQL unique constraint violations
+    if (error.code === '23505') {
+      if (error.constraint === 'users_dui_key') {
+        return res.status(400).json({ error: 'El número de DUI ya está registrado en otro usuario' });
+      }
+      if (error.constraint === 'users_email_key') {
+        return res.status(400).json({ error: 'El correo electrónico ya está registrado' });
+      }
+      return res.status(400).json({ error: 'Dato duplicado: este registro ya existe' });
+    }
+    res.status(500).json({ error: 'Error al crear usuario' });
   }
 });
 
