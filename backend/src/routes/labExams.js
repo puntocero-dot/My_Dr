@@ -161,8 +161,8 @@ router.post('/', authenticateToken, requireMedicalStaff, upload.single('file'), 
         lab_name, notes, results, file_url, file_type, file_name, created_by
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
-      [patientId, consultationId || null, examType, examName, examDate || new Date(), 
-       labName, notes, results ? JSON.parse(results) : null, fileUrl, fileType, fileName, req.user.id]
+      [patientId, consultationId || null, examType, examName, examDate || new Date(),
+        labName, notes, results ? JSON.parse(results) : null, fileUrl, fileType, fileName, req.user.id]
     );
 
     await logAudit(req.user.id, 'CREATE_LAB_EXAM', 'lab_exams', result.rows[0].id, null, result.rows[0], req);
@@ -197,7 +197,7 @@ router.post('/:id/analyze', authenticateToken, requireMedicalStaff, async (req, 
     }
 
     const exam = result.rows[0];
-    
+
     if (!exam.file_url) {
       return res.status(400).json({ error: 'No file attached to analyze' });
     }
@@ -210,6 +210,11 @@ router.post('/:id/analyze', authenticateToken, requireMedicalStaff, async (req, 
     const patient = patientResult.rows[0];
 
     // Read file and convert to base64
+    if (!fs.existsSync(exam.file_url)) {
+      return res.status(400).json({
+        error: 'El archivo del examen ya no está disponible en el servidor. Esto puede ocurrir si el servidor fue actualizado. Por favor, suba el archivo nuevamente.'
+      });
+    }
     const fileBuffer = fs.readFileSync(exam.file_url);
     const base64File = fileBuffer.toString('base64');
 
