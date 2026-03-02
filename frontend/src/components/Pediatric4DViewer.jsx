@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo, useCallback, Suspense } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Environment, ContactShadows, Html } from '@react-three/drei'
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls, Html } from '@react-three/drei'
 import * as THREE from 'three'
 
 // ──────────────────────────────────────────────
@@ -75,16 +75,8 @@ function HumanBodyModel({
     // Get age-proportional body params
     const proportions = useMemo(() => getProportionsForAge(ageMonths), [ageMonths])
 
-    // Animate smooth transitions
-    const currentProportions = useRef(proportions)
-    useFrame((_, delta) => {
-        const cp = currentProportions.current
-        const speed = 3 * delta
-        cp.headRatio = THREE.MathUtils.lerp(cp.headRatio, proportions.headRatio, speed)
-        cp.trunkRatio = THREE.MathUtils.lerp(cp.trunkRatio, proportions.trunkRatio, speed)
-        cp.limbRatio = THREE.MathUtils.lerp(cp.limbRatio, proportions.limbRatio, speed)
-        cp.headScale = THREE.MathUtils.lerp(cp.headScale, proportions.headScale, speed)
-    })
+    // Proportions are computed via useMemo — no animation loop needed
+    // This is compatible with frameloop="demand" for GPU efficiency
 
     // Weight deformation
     const torsoScaleX = useMemo(() => {
@@ -175,12 +167,8 @@ function HumanBodyModel({
     const shoulderY = torsoTopY - 0.04
     const armCenterY = shoulderY - armLen / 2
 
-    // Slow idle rotation for visual appeal
-    useFrame((_, delta) => {
-        if (groupRef.current && !isGhost) {
-            groupRef.current.rotation.y += delta * 0.08
-        }
-    })
+    // No idle rotation — user controls via OrbitControls instead
+    // This prevents constant GPU re-renders that cause Context Lost
 
     const cursor = (!isGhost && !isIdeal) ? 'pointer' : 'default'
 
@@ -191,7 +179,7 @@ function HumanBodyModel({
                 position={[0, headY, 0]}
                 material={getMaterial('head')}
                 onClick={(e) => handleClick('head', e)}
-                castShadow
+
                 onPointerOver={() => { if (!isGhost && !isIdeal) document.body.style.cursor = 'pointer' }}
                 onPointerOut={() => { document.body.style.cursor = 'default' }}
             >
@@ -199,7 +187,7 @@ function HumanBodyModel({
             </mesh>
 
             {/* Neck */}
-            <mesh position={[0, neckY, 0]} material={material} castShadow>
+            <mesh position={[0, neckY, 0]} material={material}>
                 <cylinderGeometry args={[0.05, 0.06, neckH, 12]} />
             </mesh>
 
@@ -208,7 +196,7 @@ function HumanBodyModel({
                 position={[0, torsoCenterY, 0]}
                 material={getMaterial('torso')}
                 onClick={(e) => handleClick('torso', e)}
-                castShadow
+
                 onPointerOver={() => { if (!isGhost && !isIdeal) document.body.style.cursor = 'pointer' }}
                 onPointerOut={() => { document.body.style.cursor = 'default' }}
             >
@@ -221,7 +209,7 @@ function HumanBodyModel({
                 <mesh
                     position={[0, torsoCenterY - torsoH * 0.15, torsoD * 0.3]}
                     material={material}
-                    castShadow
+
                 >
                     <sphereGeometry args={[torsoW * 0.7 * bodyFatIntensity, 16, 16]} />
                 </mesh>
@@ -232,7 +220,7 @@ function HumanBodyModel({
                 position={[-(torsoW + armR + 0.02), armCenterY, 0]}
                 material={getMaterial('leftArm')}
                 onClick={(e) => handleClick('leftArm', e)}
-                castShadow
+
                 rotation={[0, 0, 0.15]}
                 onPointerOver={() => { if (!isGhost && !isIdeal) document.body.style.cursor = 'pointer' }}
                 onPointerOut={() => { document.body.style.cursor = 'default' }}
@@ -245,7 +233,7 @@ function HumanBodyModel({
                 position={[(torsoW + armR + 0.02), armCenterY, 0]}
                 material={getMaterial('rightArm')}
                 onClick={(e) => handleClick('rightArm', e)}
-                castShadow
+
                 rotation={[0, 0, -0.15]}
                 onPointerOver={() => { if (!isGhost && !isIdeal) document.body.style.cursor = 'pointer' }}
                 onPointerOut={() => { document.body.style.cursor = 'default' }}
@@ -258,7 +246,7 @@ function HumanBodyModel({
                 position={[-hipW, legCenterY, 0]}
                 material={getMaterial('leftLeg')}
                 onClick={(e) => handleClick('leftLeg', e)}
-                castShadow
+
                 onPointerOver={() => { if (!isGhost && !isIdeal) document.body.style.cursor = 'pointer' }}
                 onPointerOut={() => { document.body.style.cursor = 'default' }}
             >
@@ -270,7 +258,7 @@ function HumanBodyModel({
                 position={[hipW, legCenterY, 0]}
                 material={getMaterial('rightLeg')}
                 onClick={(e) => handleClick('rightLeg', e)}
-                castShadow
+
                 onPointerOver={() => { if (!isGhost && !isIdeal) document.body.style.cursor = 'pointer' }}
                 onPointerOut={() => { document.body.style.cursor = 'default' }}
             >
@@ -280,10 +268,10 @@ function HumanBodyModel({
             {/* Feet (small spheres) */}
             {!isGhost && (
                 <>
-                    <mesh position={[-hipW, legCenterY - legLen / 2 - legR * 0.3, legR * 0.4]} material={material} castShadow>
+                    <mesh position={[-hipW, legCenterY - legLen / 2 - legR * 0.3, legR * 0.4]} material={material}>
                         <sphereGeometry args={[legR * 0.9, 8, 8]} />
                     </mesh>
-                    <mesh position={[hipW, legCenterY - legLen / 2 - legR * 0.3, legR * 0.4]} material={material} castShadow>
+                    <mesh position={[hipW, legCenterY - legLen / 2 - legR * 0.3, legR * 0.4]} material={material}>
                         <sphereGeometry args={[legR * 0.9, 8, 8]} />
                     </mesh>
                 </>
@@ -292,10 +280,10 @@ function HumanBodyModel({
             {/* Hands (small spheres) */}
             {!isGhost && (
                 <>
-                    <mesh position={[-(torsoW + armR + 0.04), armCenterY - armLen * 0.35, 0]} material={material} castShadow>
+                    <mesh position={[-(torsoW + armR + 0.04), armCenterY - armLen * 0.35, 0]} material={material}>
                         <sphereGeometry args={[armR * 0.9, 8, 8]} />
                     </mesh>
-                    <mesh position={[(torsoW + armR + 0.04), armCenterY - armLen * 0.35, 0]} material={material} castShadow>
+                    <mesh position={[(torsoW + armR + 0.04), armCenterY - armLen * 0.35, 0]} material={material}>
                         <sphereGeometry args={[armR * 0.9, 8, 8]} />
                     </mesh>
                 </>
@@ -310,30 +298,21 @@ function HumanBodyModel({
 function SceneEnvironment() {
     return (
         <>
-            <ambientLight intensity={0.45} />
+            <ambientLight intensity={0.6} />
             <directionalLight
                 position={[4, 6, 4]}
-                intensity={0.9}
-                castShadow
-                shadow-mapSize={[1024, 1024]}
-                shadow-camera-far={20}
-                shadow-camera-left={-3}
-                shadow-camera-right={3}
-                shadow-camera-top={3}
-                shadow-camera-bottom={-3}
+                intensity={0.8}
             />
             <hemisphereLight
                 color="#b1e1ff"
                 groundColor="#b97a20"
-                intensity={0.25}
+                intensity={0.3}
             />
-            <ContactShadows
-                position={[0, -1.15, 0]}
-                opacity={0.35}
-                scale={6}
-                blur={2.5}
-                far={4}
-            />
+            {/* Simple static shadow plane instead of ContactShadows */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.15, 0]}>
+                <planeGeometry args={[4, 4]} />
+                <meshStandardMaterial color="#e2e8f0" transparent opacity={0.3} />
+            </mesh>
             <OrbitControls
                 enablePan={false}
                 minDistance={2.5}
@@ -341,7 +320,6 @@ function SceneEnvironment() {
                 minPolarAngle={Math.PI / 6}
                 maxPolarAngle={Math.PI / 1.8}
                 target={[0, 0.2, 0]}
-                autoRotate={false}
             />
         </>
     )
@@ -526,9 +504,9 @@ export default function Pediatric4DViewer({
             {/* 3D Canvas */}
             <Canvas
                 camera={{ position: [0, 0.8, 4.5], fov: 45 }}
-                shadows
-                dpr={[1, 2]}
-                gl={{ antialias: true, alpha: true }}
+                dpr={[1, 1.5]}
+                gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
+                frameloop="demand"
             >
                 <Suspense fallback={<CanvasLoader />}>
                     <SceneEnvironment />

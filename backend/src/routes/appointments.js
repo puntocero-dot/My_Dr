@@ -177,7 +177,7 @@ router.post('/', authenticateToken, [
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
-      error: 'Error de validación: ' + errors.array().map(e => `${e.param}: ${e.msg}`).join(', ')
+      error: 'Error de validación: ' + errors.array().map(e => `${e.path || e.param || 'campo'}: ${e.msg}`).join(', ')
     });
   }
 
@@ -185,6 +185,10 @@ router.post('/', authenticateToken, [
     clinicId, doctorId, patientId, parentId, scheduledDate, scheduledTime,
     durationMinutes, type, reason, preVisitInstructions, notes
   } = req.body;
+
+  // Sanitize clinicId: empty string -> null to avoid UUID cast error
+  const safeClinicId = clinicId && clinicId.length > 0 ? clinicId : null;
+  const safeParentId = parentId && parentId.length > 0 ? parentId : null;
 
   try {
     // Check for conflicts
@@ -212,7 +216,7 @@ router.post('/', authenticateToken, [
         duration_minutes, type, reason, pre_visit_instructions, notes, created_by
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
-      [clinicId, doctorId, patientId, parentId, scheduledDate, scheduledTime,
+      [safeClinicId, doctorId, patientId, safeParentId, scheduledDate, scheduledTime,
         duration, type, reason, preVisitInstructions, notes, req.user.id]
     );
 
