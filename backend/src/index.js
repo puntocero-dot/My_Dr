@@ -31,12 +31,27 @@ const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
-app.use(cors({
-  origin: allowedOrigins,
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    // Strict block of wildcards in production
+    if (process.env.NODE_ENV === 'production' && allowedOrigins.includes('*')) {
+      return callback(new Error('Wildcard origins are not allowed in production'), false);
+    }
+
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS Policy: Origin not allowed'), false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Security middleware (disabled CSP for development)
 app.use(helmet({

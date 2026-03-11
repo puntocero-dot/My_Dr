@@ -6,11 +6,24 @@ const { query } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { logAudit } = require('../middleware/audit');
 const logger = require('../config/logger');
+const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
 
+// Stricter rate limit for login to prevent brute force
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP or email to 5 login requests per window
+  message: { error: 'Too many login attempts. Please try again after 15 minutes.' },
+  keyGenerator: (req) => {
+    // Trust proxy logic might be needed if behind a load balancer
+    const ip = req.headers['x-forwarded-for'] || req.ip;
+    return req.body.email ? `${ip}_${req.body.email}` : ip;
+  }
+});
+
 // Login
-router.post('/login', [
+router.post('/login', loginLimiter, [
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty()
 ], async (req, res) => {
@@ -133,6 +146,37 @@ router.post('/register', [
   } catch (error) {
     logger.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Logout (Revoke token)
+router.post('/logout', authenticateToken, async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(400).json({ error: 'Token is required' });
+  }
+
+  try {
+    const decoded = jwt.decode(token);
+    const expiresAt = decoded && decoded.exp ? new Date(decoded.exp * 1000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await query(
+      `INSERT INTO revoked_tokens (token, expires_at) VALUES ($1, $2) ON CONFLICT (token) DO NOTHING`,
+      [token, expiresAt]
+    );
+
+    // Optional: Cleanup old tokens occasionally
+    if (Math.random() < 0.1) {
+      await query('SELECT cleanup_revoked_tokens()').catch(err => logger.error('Cleanup error', err));
+    }
+
+    await logAudit(req.user.id, 'LOGOUT', 'users', req.user.id, null, null, req);
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    logger.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
   }
 });
 

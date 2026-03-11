@@ -86,7 +86,7 @@ El frontend estará en `http://localhost:3000`
 
 ### Backend (.env)
 ```env
-DATABASE_URL=postgresql://my_dr_user:my_dr_pass@localhost:5434/my_dr
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 JWT_SECRET=my_dr_super_secret_key_change_in_production
 JWT_EXPIRES_IN=7d
 OPENAI_API_KEY=sk-your-openai-api-key

@@ -31,6 +31,15 @@ router.get('/', authenticateToken, requireMedicalStaff, async (req, res) => {
     const params = [];
     let paramIndex = 1;
 
+    // Filter by doctor_id if the user is a doctor
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length > 0) {
+        sql += ` AND p.doctor_id = $${paramIndex++}`;
+        params.push(docRes.rows[0].id);
+      }
+    }
+
     if (clinicId) {
       sql += ` AND p.clinic_id = $${paramIndex++}`;
       params.push(clinicId);
@@ -169,7 +178,7 @@ router.post('/', authenticateToken, requireMedicalStaff, [
   }
 
   const {
-    clinicId, firstName, lastName, dateOfBirth, gender, bloodType,
+    clinicId, doctorId, firstName, lastName, dateOfBirth, gender, bloodType,
     birthWeightGrams, birthHeightCm, apgar1min, apgar5min, gestationalWeeks, birthNotes,
     allergies, chronicConditions, insuranceProvider, insurancePolicyNumber, notes,
     parentId
@@ -180,15 +189,24 @@ router.post('/', authenticateToken, requireMedicalStaff, [
     const countResult = await query('SELECT COUNT(*) FROM patients');
     const mrn = `MR${String(parseInt(countResult.rows[0].count) + 1).padStart(6, '0')}`;
 
+    // Determine doctor assignment
+    let assignedDoctorId = doctorId || null;
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length > 0) {
+        assignedDoctorId = docRes.rows[0].id;
+      }
+    }
+
     const result = await query(
       `INSERT INTO patients (
-        clinic_id, medical_record_number, first_name, last_name, date_of_birth, gender, blood_type,
+        clinic_id, doctor_id, medical_record_number, first_name, last_name, date_of_birth, gender, blood_type,
         birth_weight_grams, birth_height_cm, apgar_1min, apgar_5min, gestational_weeks, birth_notes,
         allergies, chronic_conditions, insurance_provider, insurance_policy_number, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *`,
       [
-        clinicId, mrn, firstName, lastName, dateOfBirth, gender, bloodType || 'unknown',
+        clinicId, assignedDoctorId, mrn, firstName, lastName, dateOfBirth, gender, bloodType || 'unknown',
         birthWeightGrams, birthHeightCm, apgar1min, apgar5min, gestationalWeeks, birthNotes,
         allergies || [], chronicConditions || [], insuranceProvider, insurancePolicyNumber, notes
       ]
@@ -233,6 +251,14 @@ router.put('/:id', authenticateToken, requireMedicalStaff, async (req, res) => {
     const oldResult = await query('SELECT * FROM patients WHERE id = $1', [req.params.id]);
     if (oldResult.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    // Ownership check for doctors
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length === 0 || oldResult.rows[0].doctor_id !== docRes.rows[0].id) {
+        return res.status(403).json({ error: 'Access denied: You can only edit your own patients' });
+      }
     }
 
     const result = await query(

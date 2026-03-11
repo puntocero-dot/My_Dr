@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://my_dr_user:my_dr_pass@localhost:5434/my_dr'
+  connectionString: process.env.DATABASE_URL
 });
 
 async function fixPasswords() {

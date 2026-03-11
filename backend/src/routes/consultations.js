@@ -246,6 +246,17 @@ router.patch('/:id/vitals', authenticateToken, requireRole('doctor', 'admin'), a
   } = req.body;
 
   try {
+    const consultRes = await query('SELECT doctor_id FROM consultations WHERE id = $1', [req.params.id]);
+    if (consultRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Consultation not found' });
+    }
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length === 0 || consultRes.rows[0].doctor_id !== docRes.rows[0].id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
     // Calculate BMI if weight and height provided
     let bmi = null;
     if (weightKg && heightCm) {
@@ -306,6 +317,17 @@ router.patch('/:id/diagnosis', authenticateToken, requireRole('doctor', 'admin')
   } = req.body;
 
   try {
+    const consultRes = await query('SELECT doctor_id FROM consultations WHERE id = $1', [req.params.id]);
+    if (consultRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Consultation not found' });
+    }
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length === 0 || consultRes.rows[0].doctor_id !== docRes.rows[0].id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
     const result = await query(
       `UPDATE consultations SET
         physical_exam = COALESCE($1, physical_exam),
@@ -336,6 +358,17 @@ router.patch('/:id/diagnosis', authenticateToken, requireRole('doctor', 'admin')
 // Complete consultation
 router.patch('/:id/complete', authenticateToken, requireRole('doctor', 'admin'), async (req, res) => {
   try {
+    const consultRes = await query('SELECT doctor_id FROM consultations WHERE id = $1', [req.params.id]);
+    if (consultRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Consultation not found' });
+    }
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length === 0 || consultRes.rows[0].doctor_id !== docRes.rows[0].id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
     const result = await query(
       `UPDATE consultations SET status = 'completed', updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 RETURNING appointment_id`,
@@ -369,6 +402,13 @@ router.delete('/:id', authenticateToken, requireRole('doctor', 'admin'), async (
     const consultation = await query('SELECT * FROM consultations WHERE id = $1', [req.params.id]);
     if (consultation.rows.length === 0) {
       return res.status(404).json({ error: 'Consultation not found' });
+    }
+
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length === 0 || consultation.rows[0].doctor_id !== docRes.rows[0].id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
     }
 
     // Cascade delete related records

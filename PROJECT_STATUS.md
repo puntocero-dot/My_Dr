@@ -205,13 +205,14 @@ Las siguientes tablas existen como archivos de migración en `backend/src/script
 
 ### Seed Data
 - **Clínica:** Clínica Pediátrica Central (UUID: `11111111-...`)
-- **Admin:** admin@mydr.com / 123456 (role: `admin`)
-- **Doctor:** doctor@mydr.com / 123456 (role: `doctor`, JVPM-12345, Pediatría General)
-- **Secretaria:** secretaria@mydr.com / 123456 (role: `secretary`)
+- **Admin:** admin@mydr.com (role: `admin`)
+- **Doctor:** doctor@mydr.com (role: `doctor`, JVPM-12345, Pediatría General)
+- **Secretaria:** secretaria@mydr.com (role: `secretary`)
 - **Vacunas:** 10 vacunas del esquema nacional de El Salvador
 - **Servicios:** 5 servicios (Consulta Primera Vez, Control, Urgencia, Vacunación, Teleconsulta)
 
-> **Hash de contraseña:** `$2a$10$A8qO5qCRoSdMVDbTt9vxsey.uZCdoYU3Oi7sE35fS0QFrAIbkr2ty` (bcrypt de "123456")
+> [!CAUTION] 
+> Contraseñas por defecto (ej: 123456) deben ser cambiadas inmediatamente en producción.
 
 ---
 
@@ -736,7 +737,7 @@ git push origin main
 
 6. **El init.sql es la fuente de verdad** para el schema. Las migraciones en `backend/src/scripts/migrations/` son incrementales y algunas ya están integradas en init.sql, otras no.
 
-7. **El hash de contraseña seed** es `$2a$10$A8qO5qCRoSdMVDbTt9vxsey.uZCdoYU3Oi7sE35fS0QFrAIbkr2ty` (bcrypt de "123456"). Si regeneras la DB, las contraseñas funcionan.
+7. **Seguridad y contraseñas.** Todas las contraseñas deben ser seguras y únicas. Nunca compartir credenciales en texto plano.
 
 8. **Consultas creadas por admin** auto-crean un doctor record (`ADMIN-LICENSE`) para el admin si no existe uno. Esto usa `ON CONFLICT (user_id) DO UPDATE SET is_active = true`.
 

@@ -11,6 +11,11 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
+    const revokedCheck = await query('SELECT token FROM revoked_tokens WHERE token = $1', [token]);
+    if (revokedCheck.rows.length > 0) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     const result = await query(
