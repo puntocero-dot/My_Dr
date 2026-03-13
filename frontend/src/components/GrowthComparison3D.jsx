@@ -152,17 +152,17 @@ export default function GrowthComparison3D({ data, viewMode = 'bars' }) {
       <div className="flex justify-center gap-6 mt-6 text-sm">
         {displayPreviousWeight && (
           <span className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-gray-400"></span>
+            <span className="w-3 h-3 rounded-full bg-blue-500"></span>
             Última consulta
           </span>
         )}
         <span className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: healthStatus?.color || '#3b82f6' }}></span>
+          <span className="w-3 h-3 rounded-full bg-slate-400"></span>
           Actual
         </span>
         <span className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-green-500"></span>
-          Ideal (CDC P50)
+          Ideal (OMS P50)
         </span>
       </div>
 
@@ -257,9 +257,9 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
         </div>
       )}
 
-      <div className="flex justify-center items-end gap-12 min-h-[380px] relative py-8 px-12 pt-16">
+      <div className="flex justify-center items-end gap-12 min-h-[380px] relative py-8 px-12 pt-24">
         {/* Vertical Ruler */}
-        <div className="absolute left-6 bottom-[128px] top-8 w-12 border-r border-slate-200 dark:border-white/10 z-0">
+        <div className="absolute left-6 bottom-32 top-8 w-12 border-r border-slate-200 dark:border-white/10 z-0">
           {[...Array(Math.ceil(Math.max(current.height, ideal.height, previous?.height || 0) / 10) + 2)].map((_, i) => {
             const cm = i * 10;
             const bottom = cm * pxPerCm;
@@ -273,19 +273,25 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
         </div>
 
         {/* Horizontal Guide Lines */}
-        {/* Ideal Line */}
+        {/* Ideal Line (Green) */}
         <div className="absolute left-6 right-6 border-t-2 border-dashed border-green-500/20 z-0 transition-all duration-1000" style={{ bottom: `${idealHeightPx + 128}px` }}>
-           <div className="absolute -top-5 right-0 text-[10px] font-black text-green-500/50 uppercase tracking-tighter">Ideal OMS ({ideal.displayHeight}{heightUnit})</div>
+           <div className="absolute -top-5 right-0 text-[10px] font-black text-green-500/60 uppercase tracking-tighter">Ideal OMS ({ideal.displayHeight}{heightUnit})</div>
         </div>
         
-        {/* Current Line */}
-        <div className="absolute left-6 right-6 border-t-2 border-dashed z-0 transition-all duration-1000" style={{ bottom: `${currentHeightPx + 128}px`, borderColor: `${healthStatus?.color}44` }}>
-           <div className="absolute -top-5 left-12 text-[10px] font-black uppercase tracking-tighter" style={{ color: `${healthStatus?.color}aa` }}>Actual ({current.displayHeight}{heightUnit})</div>
+        {/* Current Line (Gray) */}
+        <div className="absolute left-6 right-6 border-t-2 border-dashed border-slate-400/30 z-20 transition-all duration-1000" style={{ bottom: `${currentHeightPx + 128}px` }}>
+           <div className="absolute -top-6 left-12 flex flex-col items-start translate-y-1">
+             <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Actual ({current.displayHeight}{heightUnit})</span>
+             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-gray-800 text-slate-400 border border-slate-200 dark:border-slate-700">
+               Dif: {current.height > ideal.height ? '+' : ''}{(current.height - ideal.height).toFixed(1)} cm
+             </span>
+           </div>
         </div>
 
-        {/* Previous Line */}
+        {/* Previous Line (Blue) */}
         {previous && (
-          <div className="absolute left-6 right-6 border-t border-dotted border-slate-400/30 z-0 transition-all duration-1000" style={{ bottom: `${previousHeightPx + 128}px` }}>
+          <div className="absolute left-6 right-6 border-t-2 border-dashed border-blue-400/20 z-0 transition-all duration-1000" style={{ bottom: `${previousHeightPx + 128}px` }}>
+             <div className="absolute -top-5 left-1/3 text-[9px] font-black text-blue-400/60 uppercase tracking-tighter">Anterior ({previous.displayHeight}{heightUnit})</div>
           </div>
         )}
 
@@ -299,49 +305,49 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
           />
         </div>
 
-        {/* Previous consultation (gray silhouette) */}
+        {/* Previous consultation (Blue silhouette) */}
         {previous && previousHeightScale && (
-          <div className="flex flex-col items-center z-10">
+          <div className="flex flex-col items-center z-10 transition-all duration-500 hover:scale-105">
             <div className="h-[200px] flex items-end">
               <FriendlyChildSilhouette
                 heightScale={previousHeightScale}
                 widthScale={1}
-                color="#cbd5e1"
+                color="#3b82f6"
                 bodyFat={0}
               />
             </div>
-            <div className="mt-4 text-center bg-white/80 dark:bg-gray-700/80 rounded-xl px-4 py-2 shadow-sm min-h-[52px]">
-              <p className="text-sm font-semibold text-gray-500">Última Consulta</p>
-              <p className="text-xs text-gray-400 mt-1">
+            <div className="mt-4 text-center bg-blue-50/80 dark:bg-blue-900/20 rounded-xl px-4 py-2 shadow-sm min-h-[52px] border border-blue-100 dark:border-blue-800">
+              <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Anterior</p>
+              <p className="text-xs text-blue-500/80 mt-1">
                 {previous.displayHeight}{heightUnit} / {previous.displayWeight}{weightUnit}
               </p>
             </div>
           </div>
         )}
 
-        {/* Current state (colored by health status) */}
-        <div className="flex flex-col items-center z-10">
+        {/* Current state (Gray silhouette) */}
+        <div className="flex flex-col items-center z-10 transition-all duration-500 hover:scale-105">
           <div className="h-[200px] flex items-end">
             <FriendlyChildSilhouette
               heightScale={currentHeightScale}
               widthScale={currentWidthScale}
-              color={healthStatus?.color || "#3b82f6"}
+              color="#94a3b8"
               bodyFat={bodyFatIntensity}
               abdominal={abdominalExpansion}
             />
           </div>
-          <div className="mt-4 text-center bg-white/80 dark:bg-gray-700/80 rounded-xl px-4 py-2 shadow-sm border-2 min-h-[52px]" style={{ borderColor: healthStatus?.color || '#3b82f6' }}>
-            <p className="text-sm font-bold" style={{ color: healthStatus?.color || '#3b82f6' }}>
+          <div className="mt-4 text-center bg-slate-50 dark:bg-gray-800/80 rounded-xl px-4 py-2 shadow-sm border-2 min-h-[52px] border-slate-300 dark:border-slate-600">
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
               Actual
             </p>
-            <p className="text-xs mt-1" style={{ color: healthStatus?.color || '#3b82f6' }}>
+            <p className="text-xs mt-1 text-slate-500">
               {current.displayHeight}{heightUnit} / {current.displayWeight}{weightUnit}
             </p>
           </div>
         </div>
 
-        {/* Ideal reference */}
-        <div className="flex flex-col items-center z-10">
+        {/* Ideal reference (Green silhouette) */}
+        <div className="flex flex-col items-center z-10 transition-all duration-500 hover:scale-105">
           <div className="h-[200px] flex items-end">
             <FriendlyChildSilhouette
               heightScale={idealScale}
@@ -352,7 +358,7 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
             />
           </div>
           <div className="mt-4 text-center bg-green-50 dark:bg-green-900/30 rounded-xl px-4 py-2 shadow-sm border-2 border-green-300 dark:border-green-700 min-h-[52px]">
-            <p className="text-sm font-bold text-green-600 dark:text-green-400">Ideal (CDC)</p>
+            <p className="text-sm font-bold text-green-600 dark:text-green-400">Ideal (OMS)</p>
             <p className="text-xs text-green-500 mt-1">
               {ideal.displayHeight}{heightUnit} / {ideal.displayWeight}{weightUnit}
             </p>

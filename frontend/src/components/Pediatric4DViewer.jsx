@@ -209,8 +209,9 @@ export default function Pediatric4DViewer({
     }, [currentHeight, idealHeight])
 
     const widthScale = useMemo(() => transform3D?.scaleXZ || 1, [transform3D])
-    const bodyFat = useMemo(() => transform3D?.bodyFatIntensity || 0, [transform3D])
-    const patientColor = useMemo(() => healthStatus?.color || '#3b82f6', [healthStatus])
+    const patientColor = '#94a3b8' // Cambiado a Gris como solicitó el usuario
+    const idealColor = '#22c55e'   // Verde OMS
+    const lastColor = '#3b82f6'    // Azul Última Consulta
 
     const percentileLabel = useMemo(() => {
         if (!transform3D?.ratioWeight) return null
@@ -276,12 +277,12 @@ export default function Pediatric4DViewer({
             </div>
 
             {/* Legend */}
-            <div className="absolute bottom-3 right-3 z-10 flex gap-2 text-[10px]">
+            <div className="absolute bottom-3 right-3 z-20 flex gap-2 text-[10px]">
                 <span className="flex items-center gap-1 bg-black/30 backdrop-blur-sm text-white/80 px-2 py-1 rounded-lg">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: patientColor }}></span> Paciente
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: patientColor }}></span> Actual
                 </span>
                 <span className="flex items-center gap-1 bg-black/30 backdrop-blur-sm text-white/80 px-2 py-1 rounded-lg">
-                    <span className="w-2 h-2 rounded-full bg-green-400 opacity-50"></span> Ideal OMS
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: idealColor }}></span> Ideal OMS
                 </span>
             </div>
 
@@ -294,7 +295,7 @@ export default function Pediatric4DViewer({
                     transition: isDragging ? 'none' : 'transform 0.3s ease-out',
                 }}
             >
-                {/* Horizontal Guide Lines Overlay (Fixed, not rotating) */}
+                {/* Horizontal Guide Lines Overlay (Fixed, not rotating) - We subtract rotation to keep it flat relative to viewer */}
                 <div className="absolute inset-0 pointer-events-none z-10" style={{ transform: 'translateZ(0px)', rotateY: `${-rotateY}deg` }}>
                     {/* Ruler */}
                     <div className="absolute left-6 bottom-16 top-8 w-12 border-r border-slate-300/30 dark:border-white/10">
@@ -313,36 +314,42 @@ export default function Pediatric4DViewer({
                         })()}
                     </div>
 
-                    {/* Lines */}
+                    {/* Lines crossing the current child */}
                     {(() => {
                         const pxPerCm = 180 / (idealHeight || 100);
                         const currentY = currentHeight * pxPerCm;
                         const idealY = 180;
                         return (
                             <>
-                                {/* Ideal Line */}
-                                <div className="absolute left-6 right-6 border-t border-dashed border-green-500/30 transition-all duration-1000" style={{ bottom: `${idealY + 64}px` }}>
-                                    <div className="absolute -top-4 right-0 text-[10px] font-black text-green-500/50 uppercase tracking-tighter">Ideal ({idealHeight}cm)</div>
+                                {/* Ideal Line (Green) */}
+                                <div className="absolute left-6 right-6 border-t border-dashed border-green-500/40 transition-all duration-1000" style={{ bottom: `${idealY + 64}px` }}>
+                                    <div className="absolute -top-4 right-0 text-[10px] font-black text-green-500/60 uppercase tracking-tighter">Ideal ({idealHeight}cm)</div>
                                 </div>
-                                {/* Current Line */}
-                                <div className="absolute left-6 right-6 border-t-2 border-dashed transition-all duration-1000" style={{ bottom: `${currentY + 64}px`, borderColor: `${patientColor}44` }}>
-                                    <div className="absolute -top-4 left-12 text-[10px] font-black uppercase tracking-tighter" style={{ color: `${patientColor}aa` }}>Actual ({currentHeight}cm)</div>
+                                {/* Current Line (Gray) */}
+                                <div className="absolute left-6 right-6 border-t-2 border-dashed border-slate-400/50 transition-all duration-1000" style={{ bottom: `${currentY + 64}px` }}>
+                                    <div className="absolute -top-8 left-12 flex flex-col items-start">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Actual ({currentHeight}cm)</span>
+                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/90 dark:bg-gray-800/90 text-slate-500 border border-slate-200 dark:border-slate-700 shadow-sm">
+                                           Dif: {currentHeight > idealHeight ? '+' : ''}{(currentHeight - idealHeight).toFixed(1)} cm
+                                        </span>
+                                    </div>
                                 </div>
                             </>
                         )
                     })()}
                 </div>
+
                 {/* Ghost ideal (behind, slightly offset) */}
                 <div style={{ transform: 'translateZ(-20px)', position: 'absolute', bottom: 64 }}>
                     <CSS3DBody
                         heightScale={1}
                         widthScale={1}
                         bodyFat={0}
-                        color="#22c55e"
+                        color={idealColor}
                         isGhost={true}
                         label="Ideal (OMS P50)"
                         sublabel={`${idealHeight} cm / ${idealWeight} kg`}
-                        borderColor="#22c55e"
+                        borderColor={idealColor}
                     />
                 </div>
 
@@ -363,7 +370,7 @@ export default function Pediatric4DViewer({
             {/* Percentile label */}
             {percentileLabel && (
                 <div className="absolute top-14 left-3 z-10 px-3 py-1 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: patientColor + '22', color: patientColor }}>
+                    style={{ backgroundColor: patientColor + '22', color: '#64748b' }}>
                     {percentileLabel}
                 </div>
             )}
