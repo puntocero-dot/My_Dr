@@ -259,7 +259,7 @@ export default function PatientDetail() {
               </span>
             )}
           </div>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-brand-muted dark:text-slate-400 font-medium">
             {patient.medicalRecordNumber} • {calculateAge(patient.dateOfBirth)}
           </p>
         </div>
@@ -296,26 +296,26 @@ export default function PatientDetail() {
       <div className="card p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Fecha de Nacimiento</p>
-            <p className="font-medium text-gray-900 dark:text-white">
+            <p className="text-xs font-black text-brand-muted uppercase tracking-widest mb-1">Fecha de Nacimiento</p>
+            <p className="font-bold text-brand-dark dark:text-white">
               {new Date(patient.dateOfBirth).toLocaleDateString('es-ES')}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Género</p>
-            <p className="font-medium text-gray-900 dark:text-white">
+            <p className="text-xs font-black text-brand-muted uppercase tracking-widest mb-1">Género</p>
+            <p className="font-bold text-brand-dark dark:text-white">
               {patient.gender === 'male' ? 'Masculino' : 'Femenino'}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Tipo de Sangre</p>
-            <p className="font-medium text-gray-900 dark:text-white">
+            <p className="text-xs font-black text-brand-muted uppercase tracking-widest mb-1">Tipo de Sangre</p>
+            <p className="font-bold text-brand-dark dark:text-white">
               {patient.bloodType || 'No registrado'}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Seguro</p>
-            <p className="font-medium text-gray-900 dark:text-white">
+            <p className="text-xs font-black text-brand-muted uppercase tracking-widest mb-1">Seguro</p>
+            <p className="font-bold text-brand-dark dark:text-white">
               {patient.insuranceProvider || 'Sin seguro'}
             </p>
           </div>
@@ -378,15 +378,15 @@ export default function PatientDetail() {
                     <User className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                    <p className="font-bold text-brand-dark dark:text-white">
                       {p.firstName} {p.lastName}
                     </p>
-                    <p className="text-xs text-primary-600 font-medium capitalize">
+                    <p className="text-[10px] text-brand-accent font-black uppercase tracking-widest mb-1">
                       {p.relationship} {p.isPrimaryContact && '• Responsable'}
                     </p>
-                    <div className="flex gap-2 mt-1">
-                      {p.phone && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone className="h-2.5 w-2.5" /> {p.phone}</span>}
-                      {p.email && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Mail className="h-2.5 w-2.5" /> {p.email}</span>}
+                    <div className="flex gap-3 mt-2">
+                      {p.phone && <span className="text-[10px] text-brand-muted font-bold flex items-center gap-1"><Phone className="h-3 w-3" /> {p.phone}</span>}
+                      {p.email && <span className="text-[10px] text-brand-muted font-bold flex items-center gap-1"><Mail className="h-3 w-3" /> {p.email}</span>}
                     </div>
                   </div>
                 </div>
@@ -434,25 +434,25 @@ export default function PatientDetail() {
               Datos de Nacimiento
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Peso al nacer</p>
-                <p className="font-medium">{patient.birthWeightGrams ? `${patient.birthWeightGrams} g` : '-'}</p>
+              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-white/10 transition-colors">
+                <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">Peso al nacer</p>
+                <p className="font-bold text-brand-dark dark:text-white">{patient.birthWeightGrams ? `${patient.birthWeightGrams} g` : '-'}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Talla al nacer</p>
-                <p className="font-medium">{patient.birthHeightCm ? `${patient.birthHeightCm} cm` : '-'}</p>
+              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-white/10 transition-colors">
+                <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">Talla al nacer</p>
+                <p className="font-bold text-brand-dark dark:text-white">{patient.birthHeightCm ? `${patient.birthHeightCm} cm` : '-'}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">APGAR 1 min</p>
-                <p className="font-medium">{patient.apgar1min || '-'}</p>
+              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-white/10 transition-colors">
+                <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">APGAR 1 min</p>
+                <p className="font-bold text-brand-dark dark:text-white">{patient.apgar1min || '-'}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">APGAR 5 min</p>
-                <p className="font-medium">{patient.apgar5min || '-'}</p>
+              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-white/10 transition-colors">
+                <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">APGAR 5 min</p>
+                <p className="font-bold text-brand-dark dark:text-white">{patient.apgar5min || '-'}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Semanas de gestación</p>
-                <p className="font-medium">{patient.gestationalWeeks || '-'}</p>
+              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-white/10 transition-colors">
+                <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">Gestation</p>
+                <p className="font-bold text-brand-dark dark:text-white">{patient.gestationalWeeks || '-'} semanas</p>
               </div>
             </div>
           </div>
@@ -480,11 +480,13 @@ export default function PatientDetail() {
                       <FileText className="h-5 w-5 text-blue-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">
+                      <p className="font-bold text-brand-dark dark:text-white">
                         {consultation.reasonForVisit || 'Consulta'}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(consultation.consultationDate).toLocaleDateString('es-ES')} • {consultation.doctor}
+                      <p className="text-xs font-semibold text-brand-muted flex items-center gap-2 mt-1">
+                        <Calendar className="h-3 w-3" /> {new Date(consultation.consultationDate).toLocaleDateString('es-ES')}
+                        <span className="opacity-20">•</span>
+                        <Stethoscope className="h-3 w-3" /> {consultation.doctor}
                       </p>
                     </div>
                     {consultation.diagnosisDescriptions?.[0] && (
