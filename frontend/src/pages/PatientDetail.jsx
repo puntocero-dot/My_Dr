@@ -6,7 +6,7 @@ import { usePreferences } from '../context/PreferencesContext'
 import {
   ArrowLeft, User, Calendar, Phone, Mail, AlertTriangle,
   FileText, Syringe, Activity, Edit, Plus, Clock,
-  Heart, Thermometer, Scale, Ruler, Trash2, Bell, Pill, Settings, Check
+  Heart, Thermometer, Scale, Ruler, Trash2, Bell, Pill, Settings, Check, Stethoscope
 } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
