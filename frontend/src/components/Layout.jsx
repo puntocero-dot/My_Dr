@@ -11,6 +11,7 @@ export default function Layout() {
   const { user, logout, isAdmin, isDoctor } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem('darkMode') === 'true'
   )
@@ -44,10 +45,17 @@ export default function Layout() {
     <div className={`min-h-screen ${darkMode ? 'dark' : ''} selection:bg-brand-accent/30`}>
       <div className="min-h-screen bg-brand-surface dark:bg-brand-dark transition-colors duration-500">
         {/* Mobile sidebar backdrop */}
-        {sidebarOpen && (
+        {(sidebarOpen || userMenuOpen) && (
           <div 
             className="fixed inset-0 bg-brand-dark/40 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-300"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
+          />
+        )}
+        {/* Desktop menu backdrop */}
+        {userMenuOpen && (
+          <div 
+            className="fixed inset-0 z-40 hidden lg:block"
+            onClick={() => setUserMenuOpen(false)}
           />
         )}
 
@@ -148,11 +156,44 @@ export default function Layout() {
               </p>
             </div>
             
-            <div className="flex items-center gap-4">
-               <div className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors relative">
-                 <div className="absolute top-2 right-2 w-2 h-2 bg-brand-accent rounded-full border-2 border-brand-surface dark:border-brand-dark"></div>
-                 <UserCircle className="h-6 w-6 text-brand-muted" />
-               </div>
+            <div className="flex items-center gap-4 relative">
+               <button 
+                 onClick={() => setUserMenuOpen(!userMenuOpen)}
+                 className={`p-2 rounded-xl transition-all duration-300 relative group z-50 ${userMenuOpen ? 'bg-brand-accent text-white scale-110 shadow-lg shadow-brand-accent/20' : 'hover:bg-slate-100 dark:hover:bg-white/5'}`}
+               >
+                 {!userMenuOpen && <div className="absolute top-2 right-2 w-2 h-2 bg-brand-accent rounded-full border-2 border-brand-surface dark:border-brand-dark"></div>}
+                 <UserCircle className={`h-6 w-6 ${userMenuOpen ? 'text-white' : 'text-brand-muted group-hover:text-brand-dark dark:group-hover:text-white'}`} />
+               </button>
+
+               {/* Profile Dropdown */}
+               {userMenuOpen && (
+                 <div className="absolute top-14 right-0 w-64 glass-card p-4 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300 border-white/10 shadow-2xl">
+                    <div className="flex items-center gap-3 p-2 mb-4 border-b border-white/10 pb-4">
+                      <div className="w-10 h-10 rounded-xl bg-brand-accent/10 flex items-center justify-center text-brand-accent font-black">
+                        {user?.firstName?.[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-brand-dark dark:text-white truncate">{user?.firstName}</p>
+                        <p className="text-[10px] font-bold text-brand-accent uppercase">{user?.role}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <button 
+                        onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-brand-muted hover:bg-slate-100 dark:hover:bg-white/5 hover:text-brand-dark dark:hover:text-white transition-all"
+                      >
+                        <Settings className="h-4 w-4" /> Configuración
+                      </button>
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-rose-500 hover:bg-rose-500/10 transition-all"
+                      >
+                        <LogOut className="h-4 w-4" /> Cerrar Sesión
+                      </button>
+                    </div>
+                 </div>
+               )}
             </div>
           </header>
 
