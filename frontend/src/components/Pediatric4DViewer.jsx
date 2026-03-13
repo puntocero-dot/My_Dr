@@ -37,18 +37,25 @@ function getProportionsForAge(ageMonths) {
 // ──────────────────────────────────────────────
 // CSS 3D Body — Pure CSS with drag-to-rotate
 // ──────────────────────────────────────────────
-function CSS3DBody({ heightScale = 1, widthScale = 1, bodyFat = 0, color = '#3b82f6', isGhost = false, label, sublabel, borderColor }) {
-    const baseH = 180 * heightScale
+function CSS3DBody({ height = 180, widthScale = 1, bodyFat = 0, color = '#3b82f6', isGhost = false, label, sublabel, borderColor }) {
     const proportions = getProportionsForAge(24) // will be overridden by parent
-    const headSize = 36 * (proportions.headScale || 1.1) * (1 + bodyFat * 0.05)
-    const torsoW = 44 * widthScale * (1 + bodyFat * 0.35)
-    const torsoH = baseH * 0.32
-    const armW = 14 + bodyFat * 4
-    const armH = baseH * 0.30
-    const legW = 18 + bodyFat * 5
-    const legH = baseH * 0.36
+    
+    // Calibración para que la suma de las partes sea exactamente 'height'
+    // headRatio (0.13 a 0.25) determina cuánto de la altura total es cabeza
+    const headH = height * proportions.headRatio
+    const bodyH = height - headH
+    
+    const headSize = headH * 1.2 * (1 + bodyFat * 0.05)
+    const neckH = height * 0.05
+    const torsoH = bodyH * 0.45
+    const legH = bodyH * 0.50
+    
+    const torsoW = (height * 0.25) * widthScale * (1 + bodyFat * 0.35)
+    const armW = (height * 0.08) + bodyFat * 4
+    const armH = bodyH * 0.40
+    const legW = (height * 0.10) + bodyFat * 5
     const hipGap = torsoW * 0.2
-    const neckW = 14 + bodyFat * 3
+    const neckW = (height * 0.08) + bodyFat * 3
 
     const opacity = isGhost ? 0.25 : 1
     const fill = isGhost ? 'transparent' : color
@@ -75,9 +82,10 @@ function CSS3DBody({ heightScale = 1, widthScale = 1, bodyFat = 0, color = '#3b8
 
             {/* Neck */}
             <div style={{
-                width: neckW, height: 10,
+                width: neckW, height: neckH,
                 background: fill, border,
                 transition: 'all 0.6s ease',
+                marginTop: -(neckH * 0.3)
             }}></div>
 
             {/* Upper body = arms + torso */}
@@ -202,13 +210,16 @@ export default function Pediatric4DViewer({
         }
     }, [handlePointerUp, handlePointerMove])
 
-    // Compute scales
-    const heightScale = useMemo(() => {
-        if (!idealHeight || !currentHeight) return 1
-        return Math.max(0.6, Math.min(1.4, currentHeight / idealHeight))
-    }, [currentHeight, idealHeight])
-
-    const widthScale = useMemo(() => transform3D?.scaleXZ || 1, [transform3D])
+    // Calibración Unificada
+    const SCENE_HEIGHT = 220
+    const maxCm = Math.max(currentHeight, idealHeight) + 10
+    const pxPerCm = SCENE_HEIGHT / maxCm
+    
+    const currentHeightPx = currentHeight * pxPerCm
+    const idealHeightPx = idealHeight * pxPerCm
+    const bodyFat = transform3D?.bodyFatIntensity || 0
+    const widthScale = transform3D?.scaleXZ || 1
+    
     const patientColor = '#94a3b8' // Cambiado a Gris como solicitó el usuario
     const idealColor = '#22c55e'   // Verde OMS
     const lastColor = '#3b82f6'    // Azul Última Consulta
@@ -300,8 +311,7 @@ export default function Pediatric4DViewer({
                     {/* Ruler */}
                     <div className="absolute left-6 bottom-16 top-8 w-12 border-r border-slate-300/30 dark:border-white/10">
                         {(() => {
-                            const pxPerCm = 180 / (idealHeight || 100);
-                            return [...Array(Math.ceil(Math.max(currentHeight, idealHeight) / 10) + 2)].map((_, i) => {
+                            return [...Array(Math.ceil(maxCm / 10) + 1)].map((_, i) => {
                                 const cm = i * 10;
                                 const bottom = cm * pxPerCm;
                                 return (
@@ -316,9 +326,8 @@ export default function Pediatric4DViewer({
 
                     {/* Lines crossing the current child */}
                     {(() => {
-                        const pxPerCm = 180 / (idealHeight || 100);
                         const currentY = currentHeight * pxPerCm;
-                        const idealY = 180;
+                        const idealY = idealHeight * pxPerCm;
                         return (
                             <>
                                 {/* Ideal Line (Green) */}
@@ -342,7 +351,7 @@ export default function Pediatric4DViewer({
                 {/* Ghost ideal (behind, slightly offset) */}
                 <div style={{ transform: 'translateZ(-20px)', position: 'absolute', bottom: 64 }}>
                     <CSS3DBody
-                        heightScale={1}
+                        height={idealHeightPx}
                         widthScale={1}
                         bodyFat={0}
                         color={idealColor}
@@ -356,7 +365,7 @@ export default function Pediatric4DViewer({
                 {/* Patient model (front) */}
                 <div style={{ transform: 'translateZ(20px)', position: 'relative', zIndex: 2 }}>
                     <CSS3DBody
-                        heightScale={heightScale}
+                        height={currentHeightPx}
                         widthScale={widthScale}
                         bodyFat={bodyFat}
                         color={patientColor}

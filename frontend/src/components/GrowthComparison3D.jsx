@@ -233,12 +233,14 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
   const previousHeightScale = previous ? previous.height / ideal.height : null
 
   // PIXEL CONVERSION MATH
-  // We use the ideal silhouette height as the reference (160px)
-  const pxPerCm = 160 / ideal.height
-  // Use a fixed baseline offset (e.g. 32px for labels)
-  const currentHeightPx = (current.height * pxPerCm)
+  // Unificado: pxPerCm basado en una altura fija de "escena" (ej. 180px para el muñeco más grande)
+  const SCENE_HEIGHT = 180
+  const maxCm = Math.max(current.height, ideal.height, previous?.height || 0)
+  const pxPerCm = SCENE_HEIGHT / maxCm
+  
+  const currentHeightPx = current.height * pxPerCm
   const previousHeightPx = previous ? (previous.height * pxPerCm) : null
-  const idealHeightPx = 160
+  const idealHeightPx = ideal.height * pxPerCm
 
   // Body fat intensity affects width
   const bodyFatIntensity = transform3D?.bodyFatIntensity || 0
@@ -298,7 +300,7 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
         {/* Ideal Ghost (wireframe reference) */}
         <div className="absolute inset-x-12 bottom-32 flex justify-center items-end pointer-events-none opacity-20 z-0">
           <FriendlyChildSilhouette
-            heightScale={idealScale}
+            height={idealHeightPx}
             widthScale={1}
             color="#22c55e"
             isGhost={true}
@@ -306,11 +308,11 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
         </div>
 
         {/* Previous consultation (Blue silhouette) */}
-        {previous && previousHeightScale && (
+        {previous && previousHeightPx && (
           <div className="flex flex-col items-center z-10 transition-all duration-500 hover:scale-105">
             <div className="h-[200px] flex items-end">
               <FriendlyChildSilhouette
-                heightScale={previousHeightScale}
+                height={previousHeightPx}
                 widthScale={1}
                 color="#3b82f6"
                 bodyFat={0}
@@ -329,7 +331,7 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
         <div className="flex flex-col items-center z-10 transition-all duration-500 hover:scale-105">
           <div className="h-[200px] flex items-end">
             <FriendlyChildSilhouette
-              heightScale={currentHeightScale}
+              height={currentHeightPx}
               widthScale={currentWidthScale}
               color="#94a3b8"
               bodyFat={bodyFatIntensity}
@@ -350,7 +352,7 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
         <div className="flex flex-col items-center z-10 transition-all duration-500 hover:scale-105">
           <div className="h-[200px] flex items-end">
             <FriendlyChildSilhouette
-              heightScale={idealScale}
+              height={idealHeightPx}
               widthScale={1}
               color="#22c55e"
               bodyFat={0}
@@ -403,7 +405,7 @@ function AdvancedSilhouetteView({ current, previous, ideal, healthStatus, transf
 
 // Medical Formal silhouette: clean, solid shapes with soft gradients
 function FriendlyChildSilhouette({
-  heightScale = 1,
+  height = 160,
   widthScale = 1,
   color = '#3b82f6',
   bodyFat = 0,
@@ -411,8 +413,6 @@ function FriendlyChildSilhouette({
   isGhost = false,
   isIdeal = false
 }) {
-  const baseHeight = 160
-  const height = baseHeight * heightScale
   const width = 100 * widthScale
 
   // Proportions with safety defaults
