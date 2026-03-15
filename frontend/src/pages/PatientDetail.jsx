@@ -11,6 +11,7 @@ import {
 import ConfirmDialog from '../components/ConfirmDialog'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import GrowthComparison3D from '../components/GrowthComparison3D'
+import WHOGrowthCurves from '../components/WHOGrowthCurves'
 import PrescriptionModal from '../components/PrescriptionModal'
 import DocumentModal from '../components/DocumentModal'
 
@@ -854,10 +855,25 @@ export default function PatientDetail() {
                 >
                   🧍 3D
                 </button>
+                <button
+                  onClick={() => setView3DMode('curves')}
+                  className={`px-3 py-1 rounded text-sm font-medium ${view3DMode === 'curves' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700'
+                    }`}
+                >
+                  📈 Curvas OMS
+                </button>
               </div>
             </div>
 
-            <GrowthComparison3D data={growthComparison} viewMode={view3DMode} />
+            {view3DMode === 'curves' ? (
+              <WHOGrowthCurves 
+                gender={patient?.gender} 
+                history={growthHistory} 
+                patientName={`${patient?.firstName} ${patient?.lastName}`} 
+              />
+            ) : (
+              <GrowthComparison3D data={growthComparison} viewMode={view3DMode} />
+            )}
 
             {!growthComparison?.hasData && growthComparison?.ideal && (
               <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
