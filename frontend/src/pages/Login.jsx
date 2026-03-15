@@ -122,26 +122,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo credentials */}
-          <div className="mt-10 pt-8 border-t border-white/5">
-            <p className="text-xs text-slate-500 mb-4 font-bold uppercase tracking-widest text-center">Acceso Rápido (Demo)</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { label: 'Admin', email: 'admin@mydr.com' },
-                { label: 'Doctor', email: 'doctor@mydr.com' }
-              ].map(cred => (
-                <button
-                  key={cred.email}
-                  type="button"
-                  onClick={() => { setEmail(cred.email); setPassword('123456'); }}
-                  className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-left transition-colors group"
-                >
-                  <p className="text-[10px] text-brand-accent font-bold uppercase mb-0.5">{cred.label}</p>
-                  <p className="text-xs text-slate-300 truncate group-hover:text-white">{cred.email}</p>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-xs text-slate-500 mt-8 font-medium">
