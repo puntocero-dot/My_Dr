@@ -3,13 +3,23 @@ import { Pill, Plus, Trash2, Loader2, Brain, Check, X } from 'lucide-react'
 import api from '../services/api'
 
 export default function PrescriptionModal({ patientId, doctorId, onClose, onSuccess }) {
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState([{
+    medicationName: '',
+    genericName: '',
+    dose: '',
+    doseUnit: 'ml',
+    frequency: '',
+    duration: '',
+    route: 'oral',
+    instructions: ''
+  }])
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [loadingSuggestions, setLoadingSuggestions] = useState(null)
   const [suggestions, setSuggestions] = useState([])
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(null)
   const [calculatingDose, setCalculatingDose] = useState(null)
+  const [searchTimeout, setSearchTimeout] = useState(null)
 
   const addItem = () => {
     setItems([...items, {
@@ -34,22 +44,36 @@ export default function PrescriptionModal({ patientId, doctorId, onClose, onSucc
     setItems(updated)
   }
 
-  const handleSearch = async (queryText, index) => {
-    if (!queryText || queryText.length < 3) {
+  const handleSearch = (queryText, index) => {
+    if (searchTimeout) clearTimeout(searchTimeout)
+    
+    if (!queryText || queryText.length < 1) {
       setSuggestions([])
       setActiveSuggestionIndex(null)
       return
     }
+
+    // Set active index immediately so UI knows where to show suggestions/loading
     setActiveSuggestionIndex(index)
-    setLoadingSuggestions(index)
-    try {
-      const response = await api.post('/ai/medication-suggestions', { query: queryText })
-      setSuggestions(response.data.suggestions || [])
-    } catch (error) {
-      console.error('Error fetching suggestions:', error)
-    } finally {
-      setLoadingSuggestions(null)
+
+    if (queryText.length < 3) {
+      setSuggestions([])
+      return
     }
+
+    const timeout = setTimeout(async () => {
+      setLoadingSuggestions(index)
+      try {
+        const response = await api.post('/ai/medication-suggestions', { query: queryText })
+        // Verify we are still on the same query/item
+        setSuggestions(response.data.suggestions || [])
+      } catch (error) {
+        console.error('Error fetching suggestions:', error)
+      } finally {
+        setLoadingSuggestions(null)
+      }
+    }, 400)
+    setSearchTimeout(timeout)
   }
 
   const selectSuggestion = (suggestion, index) => {
@@ -58,7 +82,7 @@ export default function PrescriptionModal({ patientId, doctorId, onClose, onSucc
       ...updated[index],
       medicationName: suggestion.name,
       genericName: suggestion.generic,
-      concentration: suggestion.presentation
+      instructions: suggestion.presentation
     }
     setItems(updated)
     setSuggestions([])
@@ -80,15 +104,17 @@ export default function PrescriptionModal({ patientId, doctorId, onClose, onSucc
         const updated = [...items]
         updated[index] = {
           ...updated[index],
-          dose: response.data.recommendedDose,
-          frequency: response.data.frequency,
+          dose: response.data.recommendedDose || '',
+          frequency: response.data.frequency || '',
+          duration: response.data.duration || '',
           route: response.data.route?.toLowerCase() || 'oral',
-          instructions: response.data.reasoning
+          instructions: response.data.reasoning || item.instructions
         }
         setItems(updated)
       }
     } catch (error) {
       console.error('Error calculating dose:', error)
+      alert('Error en el cálculo con IA. Verifique los datos manualmente.')
     } finally {
       setCalculatingDose(null)
     }
