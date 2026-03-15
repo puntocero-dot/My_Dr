@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -10,21 +10,31 @@ import {
   Legend,
   ReferenceDot
 } from 'recharts'
+import { Maximize2, X } from 'lucide-react'
 import api from '../services/api'
 import { usePreferences } from '../context/PreferencesContext'
 
 export default function WHOGrowthCurves({ gender, history, patientName }) {
   const [curveData, setCurveData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
   const { convertWeight, convertHeight, getUnitLabel } = usePreferences()
+  
   const weightUnit = getUnitLabel('weight')
   const heightUnit = getUnitLabel('height')
+
+  // Calculate dynamic max age based on history
+  const maxAge = useMemo(() => {
+    if (!history?.length) return 60
+    const lastAge = Math.max(...history.map(h => h.ageMonths))
+    return Math.max(60, Math.min(228, Math.ceil(lastAge / 12) * 12 + 12)) 
+  }, [history])
 
   useEffect(() => {
     const fetchCurves = async () => {
       try {
-        // Max 60 months (5 years) as per WHO child growth standards
-        const response = await api.get(`/growth/curves/${gender}/60`)
+        setLoading(true)
+        const response = await api.get(`/growth/curves/${gender}/${maxAge}`)
         setCurveData(response.data)
       } catch (error) {
         console.error('Error fetching WHO curves:', error)
@@ -34,7 +44,7 @@ export default function WHOGrowthCurves({ gender, history, patientName }) {
     }
 
     fetchCurves()
-  }, [gender])
+  }, [gender, maxAge])
 
   if (loading) {
     return (
@@ -55,9 +65,16 @@ export default function WHOGrowthCurves({ gender, history, patientName }) {
     
     // Map curves to a combined object array
     const combined = []
-    const maxAge = 60
     
-    for (let age = 0; age <= maxAge; age++) {
+    // Create a dense set of patient points to ensure they're visible
+    const patientMap = {}
+    history?.forEach(h => {
+      if (h[type]) patientMap[h.ageMonths] = converter(h[type], true)
+    })
+
+    const dataLength = (curveData[type].p50 || []).length
+    
+    for (let age = 0; age < dataLength; age++) {
       const dataPoint = {
         age,
         p3: converter(typeData.p3[age]?.value, true),
@@ -67,10 +84,8 @@ export default function WHOGrowthCurves({ gender, history, patientName }) {
         p97: converter(typeData.p97[age]?.value, true),
       }
 
-      // Add patient data if exists for this age
-      const patientPoint = history.find(h => h.ageMonths === age)
-      if (patientPoint && patientPoint[type]) {
-        dataPoint.patientValue = converter(patientPoint[type], true)
+      if (patientMap[age] !== undefined) {
+        dataPoint.patientValue = patientMap[age]
       }
 
       combined.push(dataPoint)
@@ -99,60 +114,109 @@ export default function WHOGrowthCurves({ gender, history, patientName }) {
 
   return (
     <div className="space-y-8 bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-          Curvas de Crecimiento OMS - {patientName}
-        </h3>
-        <div className="flex gap-4 text-xs font-medium">
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-red-500"></span> P97 / P3
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-orange-400"></span> P85 / P15
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-green-500"></span> P50 (Ideal)
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-4 h-4 rounded-full border-2 border-primary-600 bg-white dark:bg-gray-800"></span> Paciente
-          </span>
+      <div className="flex justify-between items-center bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 pb-4">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            Curvas de Crecimiento OMS
+          </h3>
+          <p className="text-sm text-gray-500">{patientName}</p>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="flex gap-4 text-[10px] font-medium uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm"></span> P97 / P3
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-sm"></span> P85 / P15
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm"></span> P50
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full border-2 border-primary-600 bg-white dark:bg-gray-800 shadow-sm"></span> Paciente
+            </span>
+          </div>
+          <button 
+            onClick={() => setShowModal(true)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500"
+            title="Expandir"
+          >
+            <Maximize2 size={20} />
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {renderCharts()}
+      </div>
+
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-[10px] text-gray-500 italic">
+        * Basado en los patrones de crecimiento infantil de la Organización Mundial de la Salud (OMS).
+        Rango visualizado: 0 a {maxAge} meses.
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-8">
+          <div className="bg-white dark:bg-gray-900 w-full h-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+              <div>
+                <h3 className="text-2xl font-black text-gray-900 dark:text-white">Vista Ampliada - Curvas OMS</h3>
+                <p className="text-gray-500">{patientName} • {maxAge} meses</p>
+              </div>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-500"
+              >
+                <X size={28} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 space-y-12">
+              {renderCharts(true)}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  function renderCharts(isExpanded = false) {
+    const chartHeight = isExpanded ? "h-[500px]" : "h-[350px]"
+    
+    return (
+      <>
         {/* Weight Chart */}
-        <div className="card p-4">
-          <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-            ⚖️ Peso para la Edad ({weightUnit})
+        <div className={`${isExpanded ? 'bg-slate-50/50 dark:bg-gray-800/30' : ''} rounded-xl p-4 transition-all`}>
+          <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-6 flex items-center gap-2">
+            <span className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-lg">⚖️</span>
+            Peso para la Edad ({weightUnit})
           </h4>
-          <div className="h-[350px]">
+          <div className={chartHeight}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weightChartData} margin={{ top: 5, right: 20, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <LineChart data={weightChartData} margin={{ top: 5, right: 30, left: 10, bottom: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
                 <XAxis 
                   dataKey="age" 
-                  label={{ value: 'Edad (meses)', position: 'bottom', offset: 0, fontSize: 12 }} 
+                  label={{ value: 'Edad (meses)', position: 'bottom', offset: 10, fontSize: 12, fill: '#64748b' }} 
                   fontSize={10}
+                  tick={{ fill: '#64748b' }}
+                  interval={Math.floor(maxAge / 10)}
                 />
-                <YAxis fontSize={10} width={30} />
+                <YAxis fontSize={10} tick={{ fill: '#64748b' }} width={35} />
                 <Tooltip content={<CustomTooltip unit={weightUnit} />} />
                 
-                {/* Percentile Lines */}
-                <Line type="monotone" dataKey="p2" stroke="#ff0000" strokeWidth={1} dot={false} strokeDasharray="3 3" name="P3" />
-                <Line type="monotone" dataKey="p3" stroke="#ff4d4d" strokeWidth={1} dot={false} name="P3" />
-                <Line type="monotone" dataKey="p15" stroke="#ffa64d" strokeWidth={1} dot={false} name="P15" />
-                <Line type="monotone" dataKey="p50" stroke="#22c55e" strokeWidth={2} dot={false} name="P50" />
-                <Line type="monotone" dataKey="p85" stroke="#ffa64d" strokeWidth={1} dot={false} name="P85" />
-                <Line type="monotone" dataKey="p97" stroke="#ff4d4d" strokeWidth={1} dot={false} name="P97" />
+                <Line type="monotone" dataKey="p3" stroke="#ef4444" strokeWidth={1} dot={false} strokeOpacity={0.4} />
+                <Line type="monotone" dataKey="p15" stroke="#f59e0b" strokeWidth={1} dot={false} strokeOpacity={0.4} />
+                <Line type="monotone" dataKey="p50" stroke="#10b981" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="p85" stroke="#f59e0b" strokeWidth={1} dot={false} strokeOpacity={0.4} />
+                <Line type="monotone" dataKey="p97" stroke="#ef4444" strokeWidth={1} dot={false} strokeOpacity={0.4} />
                 
-                {/* Patient Data */}
                 <Line 
                   type="monotone" 
                   dataKey="patientValue" 
-                  stroke="#2563eb" 
-                  name="Paciente" 
-                  strokeWidth={3} 
-                  dot={{ r: 5, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }}
+                  stroke="#3b82f6" 
+                  strokeWidth={4} 
+                  dot={{ r: 5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                  activeDot={{ r: 7 }}
                   connectNulls
                 />
               </LineChart>
@@ -161,49 +225,45 @@ export default function WHOGrowthCurves({ gender, history, patientName }) {
         </div>
 
         {/* Height Chart */}
-        <div className="card p-4">
-          <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-            📏 Talla para la Edad ({heightUnit})
+        <div className={`${isExpanded ? 'bg-slate-50/50 dark:bg-gray-800/30' : ''} rounded-xl p-4 transition-all`}>
+          <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-6 flex items-center gap-2">
+            <span className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-lg">📏</span>
+            Talla para la Edad ({heightUnit})
           </h4>
-          <div className="h-[350px]">
+          <div className={chartHeight}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={heightChartData} margin={{ top: 5, right: 20, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <LineChart data={heightChartData} margin={{ top: 5, right: 30, left: 10, bottom: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
                 <XAxis 
                   dataKey="age" 
-                  label={{ value: 'Edad (meses)', position: 'bottom', offset: 0, fontSize: 12 }} 
+                  label={{ value: 'Edad (meses)', position: 'bottom', offset: 10, fontSize: 12, fill: '#64748b' }} 
                   fontSize={10}
+                  tick={{ fill: '#64748b' }}
+                  interval={Math.floor(maxAge / 10)}
                 />
-                <YAxis fontSize={10} width={30} />
+                <YAxis fontSize={10} tick={{ fill: '#64748b' }} width={35} />
                 <Tooltip content={<CustomTooltip unit={heightUnit} />} />
                 
-                {/* Percentile Lines */}
-                <Line type="monotone" dataKey="p3" stroke="#ff4d4d" strokeWidth={1} dot={false} name="P3" />
-                <Line type="monotone" dataKey="p15" stroke="#ffa64d" strokeWidth={1} dot={false} name="P15" />
-                <Line type="monotone" dataKey="p50" stroke="#22c55e" strokeWidth={2} dot={false} name="P50" />
-                <Line type="monotone" dataKey="p85" stroke="#ffa64d" strokeWidth={1} dot={false} name="P85" />
-                <Line type="monotone" dataKey="p97" stroke="#ff4d4d" strokeWidth={1} dot={false} name="P97" />
+                <Line type="monotone" dataKey="p3" stroke="#ef4444" strokeWidth={1} dot={false} strokeOpacity={0.4} />
+                <Line type="monotone" dataKey="p15" stroke="#f59e0b" strokeWidth={1} dot={false} strokeOpacity={0.4} />
+                <Line type="monotone" dataKey="p50" stroke="#10b981" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="p85" stroke="#f59e0b" strokeWidth={1} dot={false} strokeOpacity={0.4} />
+                <Line type="monotone" dataKey="p97" stroke="#ef4444" strokeWidth={1} dot={false} strokeOpacity={0.4} />
                 
-                {/* Patient Data */}
                 <Line 
                   type="monotone" 
                   dataKey="patientValue" 
-                  stroke="#2563eb" 
-                  name="Paciente" 
-                  strokeWidth={3} 
-                  dot={{ r: 5, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }}
+                  stroke="#3b82f6" 
+                  strokeWidth={4} 
+                  dot={{ r: 5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                  activeDot={{ r: 7 }}
                   connectNulls
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
-
-      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-[10px] text-gray-500 italic">
-        * Basado en los patrones de crecimiento infantil de la Organización Mundial de la Salud (OMS) para niños de 0 a 5 años.
-        Las líneas representan los percentiles 3, 15, 50, 85 y 97.
-      </div>
-    </div>
-  )
+      </>
+    )
+  }
 }

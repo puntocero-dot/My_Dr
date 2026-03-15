@@ -305,7 +305,7 @@ router.get('/patient/:patientId/comparison3d', authenticateToken, async (req, re
 router.get('/curves/:gender/:ageMaxMonths', authenticateToken, async (req, res) => {
   try {
     const { gender, ageMaxMonths } = req.params;
-    const maxAge = Math.min(parseInt(ageMaxMonths) || 60, 60);
+    const maxAge = Math.min(parseInt(ageMaxMonths) || 228, 228);
 
     const curves = {
       weight: { p3: [], p15: [], p50: [], p85: [], p97: [] },
