@@ -70,6 +70,7 @@ export default function Settings() {
 function ProfileSettings({ user }) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -80,13 +81,18 @@ function ProfileSettings({ user }) {
     e.preventDefault()
     setLoading(true)
     setSuccess(false)
+    setError('')
 
     try {
-      // Note: This would need a proper endpoint to update own profile
+      await api.put('/auth/profile', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone
+      })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
-    } catch (error) {
-      console.error('Error updating profile:', error)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al actualizar perfil')
     } finally {
       setLoading(false)
     }
@@ -103,6 +109,13 @@ function ProfileSettings({ user }) {
           <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-sm flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
             Perfil actualizado correctamente
+          </div>
+        )}
+
+        {error && (
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            {error}
           </div>
         )}
 

@@ -101,6 +101,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     const c = result.rows[0];
+
+    // Doctors can only access their own consultations
+    if (req.user.role === 'doctor') {
+      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      if (docRes.rows.length === 0 || c.doctor_id !== docRes.rows[0].id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
     res.json({
       id: c.id,
       appointmentId: c.appointment_id,

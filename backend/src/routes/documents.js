@@ -144,7 +144,7 @@ router.post('/', authenticateToken, requireMedicalStaff, [
 
   try {
     // Generate QR verification code
-    const qrCode = `MYDR-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const qrCode = `MYDR-${uuidv4().toUpperCase()}`;
 
     const result = await query(
       `INSERT INTO documents (patient_id, consultation_id, doctor_id, type, title, content, qr_verification_code)
@@ -169,7 +169,7 @@ router.post('/', authenticateToken, requireMedicalStaff, [
 });
 
 // Verify document by QR code
-router.get('/verify/:qrCode', async (req, res) => {
+router.get('/verify/:qrCode', authenticateToken, async (req, res) => {
   try {
     const result = await query(
       `SELECT d.id, d.type, d.title, d.created_at,

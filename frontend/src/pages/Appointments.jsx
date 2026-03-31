@@ -282,6 +282,7 @@ export default function Appointments() {
 function NewAppointmentModal({ doctors, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [slotsError, setSlotsError] = useState('')
   const [patients, setPatients] = useState([])
   const [searchPatient, setSearchPatient] = useState('')
   const [availableSlots, setAvailableSlots] = useState([])
@@ -326,11 +327,14 @@ function NewAppointmentModal({ doctors, onClose, onSuccess }) {
   }
 
   const fetchAvailableSlots = async () => {
+    setSlotsError('')
     try {
       const response = await api.get(`/appointments/slots/${formData.doctorId}/${formData.scheduledDate}`)
       setAvailableSlots(response.data.availableSlots || [])
     } catch (error) {
       console.error('Error fetching slots:', error)
+      setSlotsError('No se pudieron cargar los horarios disponibles. Intente nuevamente.')
+      setAvailableSlots([])
     }
   }
 
@@ -469,6 +473,9 @@ function NewAppointmentModal({ doctors, onClose, onSuccess }) {
                   <option key={slot} value={slot}>{slot}</option>
                 ))}
               </select>
+              {slotsError && (
+                <p className="text-xs text-red-500 mt-1">{slotsError}</p>
+              )}
             </div>
           </div>
 

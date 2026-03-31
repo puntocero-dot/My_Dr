@@ -48,6 +48,8 @@ export default function PatientDetail() {
   const [showAlertsModal, setShowAlertsModal] = useState(false)
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false)
   const [showDocumentModal, setShowDocumentModal] = useState(false)
+  const [labExamsError, setLabExamsError] = useState(false)
+  const [growthError, setGrowthError] = useState(false)
 
   useEffect(() => {
     if (!id || id === 'undefined') {
@@ -64,7 +66,8 @@ export default function PatientDetail() {
       const response = await api.get(`/lab-exams/patient/${id}`)
       setLabExams(response.data)
     } catch (error) {
-      console.log('Lab exams not available:', error.message)
+      console.error('Lab exams not available:', error.message)
+      setLabExamsError(true)
     }
   }
 
@@ -92,7 +95,8 @@ export default function PatientDetail() {
         setGrowthComparison(comparison3d.data)
         setGrowthHistory(history.data?.history || [])
       } catch (growthError) {
-        console.log('Growth data not available:', growthError.message)
+        console.error('Growth data not available:', growthError.message)
+        setGrowthError(true)
       }
     } catch (error) {
       console.error('Error fetching patient:', error)
@@ -617,6 +621,13 @@ export default function PatientDetail() {
             )}
           </div>
 
+          {labExamsError && (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              No se pudieron cargar los exámenes de laboratorio.
+            </div>
+          )}
+
           {labExams.length > 0 ? (
             <div className="space-y-4">
               {labExams.map((exam) => (
@@ -827,6 +838,13 @@ export default function PatientDetail() {
 
       {activeTab === 'growth' && (
         <div className="space-y-6">
+          {growthError && (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              No se pudieron cargar los datos de crecimiento.
+            </div>
+          )}
+
           {/* 3D Comparison */}
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">

@@ -40,7 +40,7 @@ const corsOptions = {
     const isAllowed = allowedOrigins.includes(origin) || 
                       allowedOrigins.some(ao => ao === '*' || (ao.includes('*') && origin.match(new RegExp(ao.replace(/\*/g, '.*')))));
 
-    if (isAllowed || process.env.NODE_ENV !== 'production') {
+    if (isAllowed) {
       callback(null, true);
     } else {
       // Log exactly which origin was rejected to help debugging
@@ -61,11 +61,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Rate limiting (increased for development)
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 1000, // limit each IP to 1000 requests per minute
-  skip: () => process.env.NODE_ENV === 'development'
 });
 app.use('/api/', limiter);
 

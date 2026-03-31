@@ -239,6 +239,48 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Update own profile
+router.put('/profile', authenticateToken, [
+  body('firstName').optional().trim().notEmpty(),
+  body('lastName').optional().trim().notEmpty(),
+  body('phone').optional()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { firstName, lastName, phone } = req.body;
+
+  try {
+    const result = await query(
+      `UPDATE users SET
+        first_name = COALESCE($1, first_name),
+        last_name = COALESCE($2, last_name),
+        phone = COALESCE($3, phone),
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING id, email, role, first_name, last_name, phone`,
+      [firstName || null, lastName || null, phone !== undefined ? phone : null, req.user.id]
+    );
+
+    await logAudit(req.user.id, 'UPDATE_PROFILE', 'users', req.user.id, null, { firstName, lastName, phone }, req);
+
+    const u = result.rows[0];
+    res.json({
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      firstName: u.first_name,
+      lastName: u.last_name,
+      phone: u.phone
+    });
+  } catch (error) {
+    logger.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
 // Change password
 router.post('/change-password', authenticateToken, [
   body('currentPassword').notEmpty(),

@@ -61,6 +61,7 @@ export default function ConsultationEnhanced() {
   const [medicationSuggestions, setMedicationSuggestions] = useState([])
   const [activeMedicationIndex, setActiveMedicationIndex] = useState(null)
   const [calculatingDose, setCalculatingDose] = useState(null)
+  const [doseError, setDoseError] = useState(null)
   const [suggestionsLoading, setSuggestionsLoading] = useState(false)
 
   useEffect(() => {
@@ -230,6 +231,7 @@ export default function ConsultationEnhanced() {
     if (!item.medicationName || !patient?.id) return
 
     setCalculatingDose(index)
+    setDoseError(null)
     try {
       const response = await api.post('/ai/calculate-dose-ai', {
         medicationName: item.medicationName,
@@ -249,6 +251,7 @@ export default function ConsultationEnhanced() {
       }
     } catch (error) {
       console.error('Error calculating AI dose:', error)
+      setDoseError('No se pudo calcular la dosis con IA. Intente nuevamente.')
     } finally {
       setCalculatingDose(null)
     }
@@ -822,6 +825,9 @@ export default function ConsultationEnhanced() {
                             {calculatingDose === index ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
                           </button>
                         </div>
+                        {doseError && calculatingDose === null && (
+                          <p className="text-xs text-red-500 mt-1">{doseError}</p>
+                        )}
                         <div className="flex gap-2">
                           <input
                             type="text"
