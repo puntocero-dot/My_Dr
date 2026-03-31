@@ -177,7 +177,10 @@ export default function Patients() {
   )
 }
 
+import { useAuth } from '../context/AuthContext'
+
 function NewPatientModal({ onClose, onSuccess }) {
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
@@ -188,11 +191,27 @@ function NewPatientModal({ onClose, onSuccess }) {
     bloodType: 'unknown',
     birthWeightGrams: '',
     birthHeightCm: '',
-    gestationalWeeks: '',
     allergies: '',
     insuranceProvider: '',
-    insurancePolicyNumber: ''
+    insurancePolicyNumber: '',
+    doctorId: ''
   })
+  const [doctors, setDoctors] = useState([])
+
+  useEffect(() => {
+    if (user?.role !== 'doctor') {
+      fetchDoctors()
+    }
+  }, [user])
+
+  const fetchDoctors = async () => {
+    try {
+      const response = await api.get('/users/role/doctors')
+      setDoctors(response.data)
+    } catch (error) {
+      console.error('Error fetching doctors:', error)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -261,6 +280,25 @@ function NewPatientModal({ onClose, onSuccess }) {
               />
             </div>
           </div>
+
+          {user?.role !== 'doctor' && (
+            <div className="space-y-2">
+              <label className="text-xs font-black text-brand-muted uppercase tracking-widest ml-1">Médico Tratante</label>
+              <select
+                value={formData.doctorId}
+                onChange={(e) => setFormData({ ...formData, doctorId: e.target.value })}
+                className="input-field cursor-pointer"
+                required={user?.role === 'secretary'}
+              >
+                <option value="">Seleccionar Médico</option>
+                {doctors.map(doc => (
+                  <option key={doc.doctorId} value={doc.doctorId}>
+                    Dra./Dr. {doc.firstName} {doc.lastName} - {doc.specialty}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             <div className="space-y-2">

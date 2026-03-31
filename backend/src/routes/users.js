@@ -69,16 +69,21 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 // Get doctors list (MUST be before /:id to avoid route conflict)
 router.get('/role/doctors', authenticateToken, requireMedicalStaff, async (req, res) => {
   try {
-    const result = await query(
-      `SELECT u.id, u.first_name, u.last_name, u.email, u.phone,
+    let sql = `SELECT u.id, u.first_name, u.last_name, u.email, u.phone,
               d.id as doctor_id, d.medical_license, d.specialty, d.clinic_id,
               c.name as clinic_name
        FROM users u
        JOIN doctors d ON u.id = d.user_id
        LEFT JOIN clinics c ON d.clinic_id = c.id
-       WHERE u.status = 'active'
-       ORDER BY u.last_name, u.first_name`
-    );
+       WHERE u.status = 'active'`;
+       
+    if (req.user.role === 'secretary') {
+      sql += ` AND d.clinic_id IN (SELECT clinic_id FROM secretary_clinics WHERE secretary_id = (SELECT id FROM secretaries WHERE user_id = ${req.user.id}))`;
+    }
+       
+    sql += ` ORDER BY u.last_name, u.first_name`;
+
+    const result = await query(sql);
 
     res.json(result.rows.map(d => ({
       id: d.id,
@@ -256,7 +261,6 @@ router.put('/:id', authenticateToken, requireAdmin, [
     let paramIndex = 6;
 
     if (password) {
-      const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash(password, 10);
       queryStr += `, password_hash = $${paramIndex}`;
       params.push(passwordHash);
@@ -282,7 +286,7 @@ router.put('/:id', authenticateToken, requireAdmin, [
     });
   } catch (error) {
     logger.error('Update user error:', error);
-    res.status(500).json({ error: 'Failed to update user' });
+    res.status(500).json({ error: 'Failed to update user', details: error.message });
   }
 });
 
