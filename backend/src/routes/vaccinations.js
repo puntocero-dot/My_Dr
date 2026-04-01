@@ -20,6 +20,7 @@ router.get('/catalog', authenticateToken, async (req, res) => {
       abbreviation: v.abbreviation,
       diseasePrevented: v.disease_prevented,
       recommendedAgesMonths: v.recommended_ages_months,
+      maxApplicationAgeMonths: v.max_application_age_months,
       doseNumber: v.dose_number,
       route: v.route,
       notes: v.notes
@@ -75,13 +76,22 @@ router.get('/patient/:patientId', authenticateToken, async (req, res) => {
       'SELECT * FROM vaccines WHERE is_active = true'
     );
 
-    // Calculate pending vaccinations
+    // Calculate pending and expired vaccinations
     const appliedVaccineIds = appliedResult.rows.map(v => v.vaccine_id);
-    const pendingVaccines = allVaccinesResult.rows.filter(v => {
-      // Check if any recommended age is <= current age and vaccine not applied
+    const pendingVaccines = [];
+    const expiredVaccines = [];
+
+    allVaccinesResult.rows.forEach(v => {
       const isRecommended = v.recommended_ages_months.some(age => age <= ageMonths);
       const isApplied = appliedVaccineIds.includes(v.id);
-      return isRecommended && !isApplied;
+      
+      if (isRecommended && !isApplied) {
+        if (v.max_application_age_months && ageMonths > v.max_application_age_months) {
+          expiredVaccines.push(v);
+        } else {
+          pendingVaccines.push(v);
+        }
+      }
     });
 
     // Calculate upcoming vaccinations
@@ -120,7 +130,17 @@ router.get('/patient/:patientId', authenticateToken, async (req, res) => {
         name: v.name,
         abbreviation: v.abbreviation,
         diseasePrevented: v.disease_prevented,
+        dueAgeMonths: Math.max(...v.recommended_ages_months.filter(a => a <= ageMonths)),
         status: 'overdue'
+      })),
+      expired: expiredVaccines.map(v => ({
+        id: v.id,
+        name: v.name,
+        abbreviation: v.abbreviation,
+        diseasePrevented: v.disease_prevented,
+        dueAgeMonths: Math.max(...v.recommended_ages_months.filter(a => a <= ageMonths)),
+        maxAgeMonths: v.max_application_age_months,
+        status: 'expired'
       })),
       upcoming: upcomingVaccines.map(v => ({
         id: v.id,

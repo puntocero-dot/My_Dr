@@ -154,6 +154,23 @@ async function runMigrations() {
       `);
       logger.info('Default specialties registered');
     }
+    
+    // Add max_application_age_months to vaccines
+    await pool.query(`ALTER TABLE vaccines ADD COLUMN IF NOT EXISTS max_application_age_months INTEGER;`);
+    logger.info('Checked vaccines column max_application_age_months');
+    
+    // Seed real expiration limits for core vaccines where applicable
+    await pool.query(`
+      UPDATE vaccines SET max_application_age_months = CASE
+        WHEN abbreviation = 'BCG' THEN 12
+        WHEN name ILIKE '%Rotavirus%' THEN 8
+        WHEN abbreviation IN ('HepB', 'Hepatitis B') THEN 12
+        WHEN abbreviation IN ('DPT-HepB-Hib', 'Pentavalente', 'Polio', 'OPV', 'Neumococo', 'PCV13') THEN 60
+        WHEN abbreviation IN ('SRP', 'DPT') THEN 120
+      ELSE 216 END
+      WHERE max_application_age_months IS NULL;
+    `);
+    
   } catch (error) {
     logger.error('Error running migrations:', error);
   }

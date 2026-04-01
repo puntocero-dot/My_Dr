@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -44,6 +44,32 @@ export default function Vaccinations() {
       console.error('Error fetching patient vaccinations:', error)
     }
   }
+
+  const groupedVaccinations = useMemo(() => {
+    if (!patientVaccinations) return []
+
+    const map = new Map()
+
+    const addToMap = (vac, ageMonths) => {
+      const key = ageMonths === 0 ? 'Al nacer' : (ageMonths === 1 ? '1 Mes' : `${ageMonths} Meses`)
+      if (!map.has(ageMonths)) {
+        map.set(ageMonths, { label: key, age: ageMonths, items: [] })
+      }
+      map.get(ageMonths).items.push(vac)
+    }
+
+    if (patientVaccinations.pending) {
+      patientVaccinations.pending.forEach(v => addToMap({ ...v, renderStatus: 'pending' }, v.dueAgeMonths))
+    }
+    if (patientVaccinations.expired) {
+      patientVaccinations.expired.forEach(v => addToMap({ ...v, renderStatus: 'expired' }, v.dueAgeMonths))
+    }
+    if (patientVaccinations.upcoming) {
+      patientVaccinations.upcoming.forEach(v => addToMap({ ...v, renderStatus: 'upcoming' }, v.nextDueAgeMonths))
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.age - b.age)
+  }, [patientVaccinations])
 
   if (loading) {
     return (
@@ -170,36 +196,63 @@ export default function Vaccinations() {
                 )}
               </div>
 
-              {/* Pending */}
-              {patientVaccinations.pending?.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Vacunas Atrasadas ({patientVaccinations.pending.length})
+              {/* Timeline Grouped */}
+              {groupedVaccinations.length > 0 && (
+                <div className="mt-8 space-y-6">
+                  <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <Clock className="h-5 w-5 text-primary-500" />
+                    Línea de Tiempo de Vacunación
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {patientVaccinations.pending.map((vac) => (
-                      <div key={vac.id} className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                        <p className="font-medium text-gray-900 dark:text-white">{vac.name}</p>
-                        <p className="text-sm text-red-600">Pendiente</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                  
+                  <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-8">
+                    {groupedVaccinations.map((group) => (
+                      <div key={group.age} className="relative pl-6">
+                        {/* Timeline dot */}
+                        <div className="absolute w-4 h-4 rounded-full bg-white dark:bg-gray-800 border-2 border-primary-500 left-[-9px] top-1.5" />
+                        
+                        <h5 className="font-bold text-gray-900 dark:text-white mb-3">
+                          {group.label}
+                        </h5>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {group.items.map((vac) => {
+                            let bgClass = "bg-gray-50 dark:bg-gray-800/50"
+                            let textClass = "text-gray-900 dark:text-white"
+                            let statusTextClass = "text-gray-500"
+                            let statusText = "Desconocido"
+                            let icon = null
 
-              {/* Upcoming */}
-              {patientVaccinations.upcoming?.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-3 flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Próximas Vacunas
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {patientVaccinations.upcoming.map((vac) => (
-                      <div key={vac.id} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <p className="font-medium text-gray-900 dark:text-white">{vac.name}</p>
-                        <p className="text-sm text-blue-600">A los {vac.nextDueAgeMonths} meses</p>
+                            if (vac.renderStatus === 'pending') {
+                              bgClass = "bg-rose-50 dark:bg-rose-900/20 ring-1 ring-rose-500/30"
+                              statusTextClass = "text-rose-600 font-medium"
+                              statusText = "Atrasada / Pendiente"
+                              icon = <AlertTriangle className="h-4 w-4 text-rose-500" />
+                            } else if (vac.renderStatus === 'expired') {
+                              bgClass = "bg-slate-100 dark:bg-slate-800 opacity-60"
+                              textClass = "text-slate-500 line-through decoration-slate-400"
+                              statusTextClass = "text-slate-500 font-medium"
+                              statusText = `Caducada (máx ${vac.maxAgeMonths || '?' } meses)`
+                              icon = <X className="h-4 w-4 text-slate-500" />
+                            } else if (vac.renderStatus === 'upcoming') {
+                              bgClass = "bg-blue-50 dark:bg-blue-900/20"
+                              statusTextClass = "text-blue-600 font-medium"
+                              statusText = "Próxima"
+                              icon = <Clock className="h-4 w-4 text-blue-500" />
+                            }
+
+                            return (
+                              <div key={vac.id} className={`p-4 rounded-xl ${bgClass} transition-all`}>
+                                <div className="flex justify-between items-start mb-1">
+                                  <p className={`font-semibold ${textClass}`}>{vac.name}</p>
+                                  {icon && <div className="mt-0.5">{icon}</div>}
+                                </div>
+                                <p className={`text-xs uppercase tracking-wider ${statusTextClass}`}>
+                                  {statusText}
+                                </p>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -224,12 +277,18 @@ export default function Vaccinations() {
                   {vaccine.name}
                 </p>
                 <p className="text-sm text-gray-500">{vaccine.abbreviation}</p>
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap gap-1 mt-2 items-center">
+                  <span className="text-xs text-gray-500 mr-1">Aplica:</span>
                   {vaccine.recommendedAgesMonths?.map((age, i) => (
                     <span key={i} className="badge badge-info text-xs">
                       {age === 0 ? 'Al nacer' : `${age}m`}
                     </span>
                   ))}
+                  {vaccine.maxApplicationAgeMonths && (
+                    <span className="badge bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-xs ml-1 border border-slate-200 dark:border-slate-700">
+                      Límite: {vaccine.maxApplicationAgeMonths}m
+                    </span>
+                  )}
                 </div>
                 {vaccine.diseasePrevented?.length > 0 && (
                   <p className="text-xs text-gray-400 mt-2">
