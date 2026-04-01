@@ -112,13 +112,16 @@ router.get('/role/doctors', authenticateToken, requireMedicalStaff, async (req, 
 router.get('/:id', authenticateToken, requireMedicalStaff, async (req, res) => {
   try {
     const result = await query(
-      `SELECT u.*, d.id as doctor_id, d.medical_license, d.specialty, d.clinic_id,
-              c.name as clinic_name,
+      `SELECT u.*, d.id as doctor_id, d.medical_license, d.specialty, 
+              COALESCE(d.clinic_id, sc.clinic_id) as clinic_id,
+              COALESCE(c.name, c2.name) as clinic_name,
               s.scope as secretary_scope, s.assigned_doctor_id
        FROM users u
        LEFT JOIN doctors d ON u.id = d.user_id
        LEFT JOIN clinics c ON d.clinic_id = c.id
        LEFT JOIN secretaries s ON u.id = s.user_id
+       LEFT JOIN secretary_clinics sc ON s.id = sc.secretary_id
+       LEFT JOIN clinics c2 ON sc.clinic_id = c2.id
        WHERE u.id = $1`,
       [req.params.id]
     );

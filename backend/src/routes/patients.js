@@ -222,10 +222,32 @@ router.post('/', authenticateToken, requireMedicalStaff, [
 
     // Determine doctor assignment
     let assignedDoctorId = doctorId || null;
+    let finalClinicId = clinicId || null;
+
     if (req.user.role === 'doctor') {
-      const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
+      const docRes = await query('SELECT id, clinic_id FROM doctors WHERE user_id = $1', [req.user.id]);
       if (docRes.rows.length > 0) {
         assignedDoctorId = docRes.rows[0].id;
+        finalClinicId = docRes.rows[0].clinic_id;
+      }
+    } else {
+      // If secretary/admin created it and assigned a doctor, use the doctor's clinic!
+      if (assignedDoctorId) {
+        const docRes = await query('SELECT clinic_id FROM doctors WHERE id = $1', [assignedDoctorId]);
+        if (docRes.rows.length > 0) {
+          finalClinicId = finalClinicId || docRes.rows[0].clinic_id;
+        }
+      }
+      
+      // If still no clinic (e.g., secretary didn't assign a doctor), use secretary's first clinic
+      if (!finalClinicId && req.user.role === 'secretary') {
+        const secRes = await query(
+          'SELECT clinic_id FROM secretary_clinics WHERE secretary_id = (SELECT id FROM secretaries WHERE user_id = $1) LIMIT 1', 
+          [req.user.id]
+        );
+        if (secRes.rows.length > 0) {
+          finalClinicId = secRes.rows[0].clinic_id;
+        }
       }
     }
 
@@ -237,7 +259,7 @@ router.post('/', authenticateToken, requireMedicalStaff, [
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *`,
       [
-        clinicId, assignedDoctorId, mrn, firstName, lastName, dateOfBirth, gender, bloodType || 'unknown',
+        finalClinicId, assignedDoctorId, mrn, firstName, lastName, dateOfBirth, gender, bloodType || 'unknown',
         birthWeightGrams, birthHeightCm, apgar1min, apgar5min, gestationalWeeks, birthNotes,
         allergies || [], chronicConditions || [], insuranceProvider, insurancePolicyNumber, notes
       ]
