@@ -2,23 +2,51 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
 import {
-  Search, Plus, Filter, ChevronRight, User, Calendar,
-  AlertTriangle, Phone, X
+  AlertTriangle, Phone, X, Filter
 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 export default function Patients() {
+  const { user, isAdmin } = useAuth()
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
+  
+  // Filters
+  const [clinics, setClinics] = useState([])
+  const [doctors, setDoctors] = useState([])
+  const [clinicId, setClinicId] = useState('')
+  const [doctorId, setDoctorId] = useState('')
 
   useEffect(() => {
     fetchPatients()
-  }, [])
+    if (isAdmin) {
+      fetchClinicsAndDoctors()
+    }
+  }, [clinicId, doctorId])
+
+  const fetchClinicsAndDoctors = async () => {
+    try {
+      const [clinicsRes, doctorsRes] = await Promise.all([
+        api.get('/settings/clinics'),
+        api.get('/users/role/doctors')
+      ])
+      setClinics(clinicsRes.data)
+      setDoctors(doctorsRes.data)
+    } catch (error) {
+      console.error('Error fetching filters:', error)
+    }
+  }
 
   const fetchPatients = async () => {
     try {
-      const response = await api.get('/patients', { params: { search } })
+      setLoading(true)
+      const params = { search }
+      if (clinicId) params.clinicId = clinicId
+      if (doctorId) params.doctorId = doctorId
+      
+      const response = await api.get('/patients', { params })
       setPatients(response.data)
     } catch (error) {
       console.error('Error fetching patients:', error)
@@ -68,20 +96,55 @@ export default function Patients() {
       </div>
 
       {/* Search & Filters */}
-      <form onSubmit={handleSearch} className="flex gap-4 p-2 glass-card rounded-2xl">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-brand-muted" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, expediente o representante..."
-            className="w-full bg-transparent border-none focus:ring-0 pl-12 py-4 text-brand-dark dark:text-white font-medium placeholder:text-slate-400"
-          />
+      <form onSubmit={handleSearch} className="flex flex-col gap-4 p-2 glass-card rounded-2xl">
+        <div className="flex gap-4 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-brand-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, expediente o representante..."
+              className="w-full bg-transparent border-none focus:ring-0 pl-12 py-4 text-brand-dark dark:text-white font-medium placeholder:text-slate-400"
+            />
+          </div>
+          <button type="submit" className="btn-primary py-3 px-8 rounded-xl hidden md:block shrink-0">
+            Buscar
+          </button>
         </div>
-        <button type="submit" className="btn-primary py-3 px-8 rounded-xl hidden md:block">
-          Buscar
-        </button>
+
+        {isAdmin && (
+          <div className="flex flex-wrap items-center gap-4 px-4 pb-4 pt-2 border-t border-white/5">
+            <div className="flex items-center gap-2 text-brand-muted text-sm font-bold w-full sm:w-auto">
+              <Filter className="h-4 w-4" />
+              <span>Filtros Globales:</span>
+            </div>
+            
+            <select
+              value={clinicId}
+              onChange={(e) => setClinicId(e.target.value)}
+              className="input-field max-w-[200px] text-sm py-2 bg-white/50 dark:bg-black/20"
+            >
+              <option value="">Todas las Clínicas</option>
+              {clinics.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={doctorId}
+              onChange={(e) => setDoctorId(e.target.value)}
+              className="input-field max-w-[200px] text-sm py-2 bg-white/50 dark:bg-black/20"
+            >
+              <option value="">Todos los Doctores</option>
+              {doctors.map(d => (
+                <option key={d.doctorId} value={d.doctorId}>
+                  Dr. {d.firstName} {d.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </form>
 
       {/* Patients List */}
@@ -176,9 +239,6 @@ export default function Patients() {
     </div>
   )
 }
-
-import { useAuth } from '../context/AuthContext'
-
 function NewPatientModal({ onClose, onSuccess }) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)

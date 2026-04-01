@@ -56,6 +56,11 @@ router.get('/', authenticateToken, requireMedicalStaff, async (req, res) => {
       params.push(clinicId);
     }
 
+    if (doctorId) {
+      sql += ` AND p.doctor_id = $${paramIndex++}`;
+      params.push(doctorId);
+    }
+
     if (search) {
       sql += ` AND (p.first_name ILIKE $${paramIndex} OR p.last_name ILIKE $${paramIndex} OR p.medical_record_number ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
