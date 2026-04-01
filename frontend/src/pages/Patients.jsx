@@ -6,19 +6,29 @@ import {
   AlertTriangle, Phone, X
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useProject } from '../context/ProjectContext'
 
 export default function Patients() {
   const { user, isAdmin } = useAuth()
+  const { activeProject } = useProject()
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   
-  // Filters
-  const [clinics, setClinics] = useState([])
+  // Local sub-filters (for when in global view or to filter by doctor)
   const [doctors, setDoctors] = useState([])
   const [clinicId, setClinicId] = useState('')
   const [doctorId, setDoctorId] = useState('')
+
+  // Sync with Global Project
+  useEffect(() => {
+    if (activeProject) {
+      setClinicId(activeProject.id)
+    } else {
+      setClinicId('')
+    }
+  }, [activeProject])
 
   useEffect(() => {
     fetchPatients()
@@ -29,11 +39,9 @@ export default function Patients() {
 
   const fetchClinicsAndDoctors = async () => {
     try {
-      const [clinicsRes, doctorsRes] = await Promise.all([
-        api.get('/clinics'),
-        api.get('/users/role/doctors')
-      ])
-      setClinics(clinicsRes.data)
+      const doctorsRes = await api.get('/users/role/doctors', {
+        params: { clinicId: clinicId || activeProject?.id }
+      })
       setDoctors(doctorsRes.data)
     } catch (error) {
       console.error('Error fetching filters:', error)
@@ -112,26 +120,13 @@ export default function Patients() {
           <button type="submit" className="btn-primary py-3 px-8 rounded-xl hidden md:block shrink-0">
             Buscar
           </button>
-        </div>
-
-        {isAdmin && (
+        </div>        {isAdmin && !activeProject && (
           <div className="flex flex-wrap items-center gap-4 px-4 pb-4 pt-2 border-t border-white/5">
             <div className="flex items-center gap-2 text-brand-muted text-sm font-bold w-full sm:w-auto">
               <Filter className="h-4 w-4" />
-              <span>Filtros Globales:</span>
+              <span>Filtrar por Médico:</span>
             </div>
             
-            <select
-              value={clinicId}
-              onChange={(e) => setClinicId(e.target.value)}
-              className="input-field max-w-[200px] text-sm py-2 bg-white/50 dark:bg-black/20"
-            >
-              <option value="">Todas las Clínicas</option>
-              {clinics.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-
             <select
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
@@ -145,6 +140,27 @@ export default function Patients() {
               ))}
             </select>
           </div>
+        )}
+
+        {isAdmin && activeProject && (
+           <div className="flex flex-wrap items-center gap-4 px-4 pb-4 pt-2 border-t border-white/5">
+             <div className="flex items-center gap-2 text-brand-muted text-sm font-bold">
+               <Briefcase className="h-4 w-4" />
+               <span>Proyecto: <span className="text-brand-accent">{activeProject.name}</span></span>
+             </div>
+             <select
+               value={doctorId}
+               onChange={(e) => setDoctorId(e.target.value)}
+               className="input-field max-w-[200px] text-sm py-2 bg-white/50 dark:bg-black/20"
+             >
+               <option value="">Todos los Doctores del Proyecto</option>
+               {doctors.map(d => (
+                 <option key={d.doctorId} value={d.doctorId}>
+                   Dr. {d.firstName} {d.lastName}
+                 </option>
+               ))}
+             </select>
+           </div>
         )}
       </form>
 

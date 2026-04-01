@@ -130,46 +130,57 @@ router.get('/doctor', authenticateToken, requireRole('doctor', 'admin'), async (
 
 // Admin dashboard
 router.get('/admin', authenticateToken, requireRole('admin'), async (req, res) => {
+  const { clinicId, doctorId } = req.query;
+  const whereProject = clinicId ? ` AND clinic_id = '${clinicId}'` : '';
+  const whereDoctor = doctorId ? ` AND doctor_id = '${doctorId}'` : '';
+  const whereCombined = whereProject + whereDoctor;
+  
   try {
-    // Total users by role
-    const usersByRole = await query(
-      `SELECT role, COUNT(*) FROM users WHERE status = 'active' GROUP BY role`
-    );
+    // Total users by role - only filtered by clinic if it's medical staff related
+    // For simplicity, we keep users global for now or filter doctors by clinic
+    const usersByRoleQuery = clinicId 
+      ? `SELECT role, COUNT(*) FROM users 
+         WHERE (role != 'doctor' AND status = 'active') 
+         OR (role = 'doctor' AND id IN (SELECT user_id FROM doctors WHERE clinic_id = $1))
+         GROUP BY role`
+      : `SELECT role, COUNT(*) FROM users WHERE status = 'active' GROUP BY role`;
+    const usersByRoleParams = clinicId ? [clinicId] : [];
+    const usersByRole = await query(usersByRoleQuery, usersByRoleParams);
 
     // Total patients
     const totalPatients = await query(
-      `SELECT COUNT(*) FROM patients WHERE is_active = true`
+      `SELECT COUNT(*) FROM patients WHERE is_active = true ${whereCombined}`
     );
 
-    // Appointments today (all clinics)
+    // Appointments today
     const appointmentsToday = await query(
-      `SELECT COUNT(*) FROM appointments WHERE scheduled_date = CURRENT_DATE`
+      `SELECT COUNT(*) FROM appointments WHERE scheduled_date = CURRENT_DATE ${whereCombined}`
     );
 
     // Consultations this month
     const consultationsMonth = await query(
       `SELECT COUNT(*) FROM consultations 
-       WHERE consultation_date >= DATE_TRUNC('month', CURRENT_DATE)`
+       WHERE consultation_date >= DATE_TRUNC('month', CURRENT_DATE) ${whereCombined}`
     );
 
     // New patients this month
     const newPatientsMonth = await query(
       `SELECT COUNT(*) FROM patients 
-       WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)`
+       WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE) ${whereCombined}`
     );
 
     // Appointments by status today
     const appointmentsByStatus = await query(
       `SELECT status, COUNT(*) FROM appointments 
-       WHERE scheduled_date = CURRENT_DATE 
+       WHERE scheduled_date = CURRENT_DATE ${whereCombined}
        GROUP BY status`
     );
 
-    // Top diagnoses this month (all doctors)
+    // Top diagnoses this month
     const topDiagnoses = await query(
       `SELECT unnest(diagnosis_descriptions) as diagnosis, COUNT(*) as count
        FROM consultations
-       WHERE consultation_date >= DATE_TRUNC('month', CURRENT_DATE)
+       WHERE consultation_date >= DATE_TRUNC('month', CURRENT_DATE) ${whereCombined}
        AND diagnosis_descriptions IS NOT NULL
        GROUP BY diagnosis
        ORDER BY count DESC
@@ -180,7 +191,7 @@ router.get('/admin', authenticateToken, requireRole('admin'), async (req, res) =
     const consultationsPerDay = await query(
       `SELECT DATE(consultation_date) as date, COUNT(*) as count
        FROM consultations
-       WHERE consultation_date >= CURRENT_DATE - INTERVAL '7 days'
+       WHERE consultation_date >= CURRENT_DATE - INTERVAL '7 days' ${whereCombined}
        GROUP BY DATE(consultation_date)
        ORDER BY date`
     );

@@ -9,11 +9,11 @@ export default {
     extend: {
       colors: {
         brand: {
-          dark: '#0f172a',    // Midnight Navy
-          primary: '#1e293b', // Deep Slate
-          accent: '#10b981',  // Sage Green
-          muted: '#64748b',   // Cool Gray
-          surface: '#f8fafc', // Off White
+          dark: 'var(--brand-dark, #0f172a)',
+          primary: 'var(--brand-primary, #1e293b)',
+          accent: 'var(--brand-accent, #10b981)',
+          muted: 'var(--brand-muted, #64748b)',
+          surface: 'var(--brand-surface, #f8fafc)',
         },
         glass: {
           white: 'rgba(255, 255, 255, 0.7)',
@@ -21,8 +21,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Sora', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-family, "Inter")', 'system-ui', 'sans-serif'],
+        display: ['var(--font-family, "Sora")', 'system-ui', 'sans-serif'],
       },
       backdropBlur: {
         xs: '2px',

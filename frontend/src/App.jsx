@@ -2,6 +2,8 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PreferencesProvider } from './context/PreferencesContext'
+import { ProjectProvider } from './context/ProjectContext'
+import ThemeManager from './components/ThemeManager'
 import Layout from './components/Layout'
 
 // Code Splitting - Lazy Loading Pages
@@ -51,65 +53,33 @@ function ProtectedRoute({ children, roles }) {
 function App() {
   return (
     <AuthProvider>
-      <PreferencesProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route path="/" element={
-            <Suspense fallback={<PageLoader />}>
-              <LandingPage />
-            </Suspense>
-          } />
-          
-          <Route path="/login" element={
-            <Suspense fallback={<PageLoader />}>
-              <Login />
-            </Suspense>
-          } />
-          
-          {/* Protected Routes Wrapper without a strict path so child paths resolve directly */}
-          <Route element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }>
-            <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
-            <Route path="/patients" element={<Suspense fallback={<PageLoader />}><Patients /></Suspense>} />
-            <Route path="/patients/:id" element={<Suspense fallback={<PageLoader />}><PatientDetail /></Suspense>} />
-            <Route path="/appointments" element={<Suspense fallback={<PageLoader />}><Appointments /></Suspense>} />
-            <Route path="/consultation/new" element={
-              <ProtectedRoute roles={['admin', 'doctor']}>
-                <Suspense fallback={<PageLoader />}><ConsultationEnhanced /></Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/consultation/:id" element={
-              <ProtectedRoute roles={['admin', 'doctor']}>
-                <Suspense fallback={<PageLoader />}><ConsultationEnhanced /></Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/vaccinations" element={<Suspense fallback={<PageLoader />}><Vaccinations /></Suspense>} />
-            <Route path="/documents" element={<Suspense fallback={<PageLoader />}><Documents /></Suspense>} />
-            <Route path="/users" element={
-              <ProtectedRoute roles={['admin']}>
-                <Suspense fallback={<PageLoader />}><Users /></Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/clinics" element={
-              <ProtectedRoute roles={['admin']}>
-                <Suspense fallback={<PageLoader />}><Clinics /></Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/referrals" element={
-              <ProtectedRoute roles={['admin', 'doctor']}>
-                <Suspense fallback={<PageLoader />}><Referrals /></Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
-          </Route>
-          
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
-      </PreferencesProvider>
+      <ProjectProvider>
+        <ThemeManager />
+        <PreferencesProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              {/* Rest of the routes remain same... */}
+              <Route path="/" element={<Suspense fallback={<PageLoader />}><LandingPage /></Suspense>} />
+              <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
+              <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+                <Route path="/patients" element={<Suspense fallback={<PageLoader />}><Patients /></Suspense>} />
+                <Route path="/patients/:id" element={<Suspense fallback={<PageLoader />}><PatientDetail /></Suspense>} />
+                <Route path="/appointments" element={<Suspense fallback={<PageLoader />}><Appointments /></Suspense>} />
+                <Route path="/consultation/new" element={<ProtectedRoute roles={['admin', 'doctor']}><Suspense fallback={<PageLoader />}><ConsultationEnhanced /></Suspense></ProtectedRoute>} />
+                <Route path="/consultation/:id" element={<ProtectedRoute roles={['admin', 'doctor']}><Suspense fallback={<PageLoader />}><ConsultationEnhanced /></Suspense></ProtectedRoute>} />
+                <Route path="/vaccinations" element={<Suspense fallback={<PageLoader />}><Vaccinations /></Suspense>} />
+                <Route path="/documents" element={<Suspense fallback={<PageLoader />}><Documents /></Suspense>} />
+                <Route path="/users" element={<ProtectedRoute roles={['admin']}><Suspense fallback={<PageLoader />}><Users /></Suspense></ProtectedRoute>} />
+                <Route path="/clinics" element={<ProtectedRoute roles={['admin']}><Suspense fallback={<PageLoader />}><Clinics /></Suspense></ProtectedRoute>} />
+                <Route path="/referrals" element={<ProtectedRoute roles={['admin', 'doctor']}><Suspense fallback={<PageLoader />}><Referrals /></Suspense></ProtectedRoute>} />
+                <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
+              </Route>
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </PreferencesProvider>
+      </ProjectProvider>
     </AuthProvider>
   )
 }

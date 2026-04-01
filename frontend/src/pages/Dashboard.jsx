@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useProject } from '../context/ProjectContext'
 import api from '../services/api'
 import {
   Users, Calendar, Clock, TrendingUp, AlertTriangle,
@@ -10,20 +11,25 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 export default function Dashboard() {
   const { user, isAdmin, isDoctor, isSecretary } = useAuth()
+  const { activeProject } = useProject()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchDashboard()
-  }, [])
+  }, [activeProject])
 
   const fetchDashboard = async () => {
     try {
+      setLoading(true)
       let endpoint = '/dashboard/doctor'
       if (isAdmin) endpoint = '/dashboard/admin'
       else if (isSecretary) endpoint = '/dashboard/secretary'
 
-      const response = await api.get(endpoint)
+      const params = {}
+      if (activeProject) params.clinicId = activeProject.id
+
+      const response = await api.get(endpoint, { params })
       setData(response.data)
     } catch (error) {
       console.error('Dashboard error:', error)
@@ -46,10 +52,13 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-extrabold text-brand-dark dark:text-white tracking-tight">
-            Bienvenido, <span className="text-brand-accent">{user?.firstName}</span>
+            {activeProject ? activeProject.name : `Bienvenido, ${user?.firstName}`}
           </h1>
           <p className="text-brand-muted font-medium mt-1">
-            {isAdmin ? 'Panel de Control Administrativo' : isDoctor ? 'Panel Médico Especializado' : 'Gestión de Recepción'}
+            {activeProject 
+              ? `Panel de control: ${activeProject.name}` 
+              : (isAdmin ? 'Resumen Global de Proyectos' : isDoctor ? 'Panel Médico Especializado' : 'Gestión de Recepción')
+            }
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm font-bold text-brand-muted bg-white/50 dark:bg-white/5 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/20">

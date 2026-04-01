@@ -170,12 +170,47 @@ async function runMigrations() {
       ELSE 216 END
       WHERE max_application_age_months IS NULL;
     `);
+    // Ensure SaaS columns exist
+    await pool.query(`
+      ALTER TABLE clinics ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}';
+      ALTER TABLE clinics ADD COLUMN IF NOT EXISTS logo_url TEXT;
+      ALTER TABLE patients ADD COLUMN IF NOT EXISTS clinic_id UUID REFERENCES clinics(id);
+    `);
+    logger.info('Ensured SaaS columns exist');
+    
+    // Ensure clinics have default SaaS settings
+    const clinicsRes = await pool.query('SELECT id, settings FROM clinics');
+    for (const clinic of clinicsRes.rows) {
+      if (!clinic.settings || Object.keys(clinic.settings).length === 0) {
+        const defaultSettings = {
+          primaryColor: '#0ea5e9', // Brand Blue
+          fontFamily: 'Inter',
+          logoUrl: null,
+          enabledModules: ['dashboard', 'patients', 'appointments', 'vaccinations', 'documents', 'lab_exams', 'ai_assistant']
+        };
+        await pool.query('UPDATE clinics SET settings = $1 WHERE id = $2', [JSON.stringify(defaultSettings), clinic.id]);
+        logger.info(`Updated default settings for clinic ${clinic.id}`);
+      }
+    }
+    
+    // Ensure all patients have a clinic_id based on their assigned doctor
+    await pool.query(`
+      UPDATE patients p
+      SET clinic_id = d.clinic_id
+      FROM doctors d
+      WHERE p.doctor_id = d.id AND p.clinic_id IS NULL;
+    `);
+    logger.info('Backfilled missing patient clinic_ids from doctor records');
     
   } catch (error) {
-    logger.error('Error running migrations:', error);
+    console.error('🔥 FATAL MIGRATION ERROR:', error);
+    process.exit(1);
   }
 }
-runMigrations();
+runMigrations().catch(err => {
+  console.error('🔥 UNHANDLED MIGRATION REJECTION:', err);
+  process.exit(1);
+});
 
 // Start server
 app.listen(PORT, () => {

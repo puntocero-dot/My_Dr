@@ -4,11 +4,14 @@ import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Users, Calendar, FileText, Syringe,
   Building2, Settings, LogOut, Menu, X, UserCircle,
-  Stethoscope, Moon, Sun
+  Stethoscope, Moon, Sun, Briefcase
 } from 'lucide-react'
+import GlobalProjectSelector from './GlobalProjectSelector'
+import { useProject } from '../context/ProjectContext'
 
 export default function Layout() {
   const { user, logout, isAdmin, isDoctor } = useAuth()
+  const { activeProject } = useProject()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -29,20 +32,31 @@ export default function Layout() {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Pacientes', href: '/patients', icon: Users },
-    { name: 'Citas', href: '/appointments', icon: Calendar },
-    { name: 'Vacunación', href: '/vaccinations', icon: Syringe },
-    { name: 'Documentos', href: '/documents', icon: FileText },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
+    { name: 'Pacientes', href: '/patients', icon: Users, module: 'patients' },
+    { name: 'Citas', href: '/appointments', icon: Calendar, module: 'appointments' },
+    { name: 'Vacunación', href: '/vaccinations', icon: Syringe, module: 'vaccinations' },
+    { name: 'Documentos', href: '/documents', icon: FileText, module: 'documents' },
     ...(isAdmin || isDoctor ? [
-      { name: 'Referencias', href: '/referrals', icon: Stethoscope },
+      { name: 'Referencias', href: '/referrals', icon: Stethoscope, module: 'referrals' },
     ] : []),
     ...(isAdmin ? [
-      { name: 'Usuarios', href: '/users', icon: UserCircle },
-      { name: 'Clínicas', href: '/clinics', icon: Building2 },
+      { name: 'Usuarios', href: '/users', icon: UserCircle, module: 'users' },
+      { name: 'Clínicas', href: '/clinics', icon: Building2, module: 'clinics' },
     ] : []),
     { name: 'Configuración', href: '/settings', icon: Settings },
-  ]
+  ].filter(item => {
+    // If we're Admin and no project is selected, show everything
+    if (isAdmin && !activeProject) return true;
+    
+    // If a project is selected (or we're a restricted user), check against enabledModules
+    if (activeProject?.settings?.enabledModules && item.module) {
+      return activeProject.settings.enabledModules.includes(item.module);
+    }
+    
+    // Always show items without a specific module (like Settings)
+    return true;
+  })
 
   return (
     <div className={`min-h-screen ${darkMode ? 'dark' : ''} selection:bg-brand-accent/30`}>
@@ -71,11 +85,17 @@ export default function Layout() {
         `}>
           <div className="flex items-center justify-between h-20 px-6 border-b border-white/10">
             <div className="flex items-center gap-3 group px-2 py-1 rounded-xl transition-all duration-300">
-              <div className="p-2 bg-gradient-to-tr from-brand-accent to-emerald-400 rounded-lg shadow-lg shadow-emerald-500/20 group-hover:rotate-12 transition-transform">
-                <Stethoscope className="h-6 w-6 text-white" />
-              </div>
+              {activeProject?.logoUrl ? (
+                <div className="h-10 w-10 flex items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm border border-white/20">
+                  <img src={activeProject.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
+                </div>
+              ) : (
+                <div className="p-2 bg-gradient-to-tr from-brand-accent to-emerald-400 rounded-lg shadow-lg shadow-emerald-500/20 group-hover:rotate-12 transition-transform font-black text-white">
+                  <Stethoscope className="h-6 w-6 text-white" />
+                </div>
+              )}
               <span className="text-2xl font-black text-brand-dark dark:text-white tracking-tighter">
-                My<span className="text-brand-accent">_</span>Dr
+                {activeProject ? activeProject.name.split(' ')[0] : 'My'}<span className="text-brand-accent">{activeProject ? '' : '_'}</span>{activeProject ? '' : 'Dr'}
               </span>
             </div>
             <button 
@@ -153,10 +173,13 @@ export default function Layout() {
               <Menu className="h-5 w-5 text-brand-dark dark:text-white" />
             </button>
             
-            <div className="hidden lg:block">
-              <p className="text-sm font-bold text-brand-muted">
-                Buen día, <span className="text-brand-dark dark:text-white">{user?.firstName}</span> 👋
-              </p>
+            <div className="flex items-center gap-6">
+              <div className="hidden lg:block">
+                <p className="text-sm font-bold text-brand-muted">
+                  Buen día, <span className="text-brand-dark dark:text-white">{user?.firstName}</span> 👋
+                </p>
+              </div>
+              {isAdmin && <GlobalProjectSelector />}
             </div>
             
             <div className="flex items-center gap-4 relative">
