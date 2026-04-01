@@ -10,7 +10,7 @@ const router = express.Router();
 // Get all patients
 router.get('/', authenticateToken, requireMedicalStaff, async (req, res) => {
   try {
-    const { search, clinicId, limit = 50, offset = 0 } = req.query;
+    const { search, clinicId, doctorId, limit = 50, offset = 0 } = req.query;
 
     let sql = `
       SELECT p.*, 
