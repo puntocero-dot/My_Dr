@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '../services/api'
 import {
   Search, Plus, Filter, ChevronRight, User, Calendar,
-  AlertTriangle, Phone, X
+  AlertTriangle, Phone, X, Briefcase
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useProject } from '../context/ProjectContext'
@@ -258,6 +258,7 @@ export default function Patients() {
 }
 function NewPatientModal({ onClose, onSuccess }) {
   const { user } = useAuth()
+  const { activeProject } = useProject()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
@@ -298,6 +299,7 @@ function NewPatientModal({ onClose, onSuccess }) {
     try {
       const data = {
         ...formData,
+        clinicId: activeProject?.id,
         birthWeightGrams: formData.birthWeightGrams ? parseInt(formData.birthWeightGrams) : null,
         birthHeightCm: formData.birthHeightCm ? parseFloat(formData.birthHeightCm) : null,
         gestationalWeeks: formData.gestationalWeeks ? parseInt(formData.gestationalWeeks) : null,

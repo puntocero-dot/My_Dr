@@ -193,14 +193,21 @@ async function runMigrations() {
       }
     }
     
-    // Ensure all patients have a clinic_id based on their assigned doctor
+    // 1. First, backfill clinic_id from the doctor's clinic_id if available
     await pool.query(`
       UPDATE patients p
       SET clinic_id = d.clinic_id
       FROM doctors d
       WHERE p.doctor_id = d.id AND p.clinic_id IS NULL;
     `);
-    logger.info('Backfilled missing patient clinic_ids from doctor records');
+
+    // 2. Second, for any remaining patients with NULL clinic_id, assign the first clinic found
+    await pool.query(`
+      UPDATE patients p
+      SET clinic_id = (SELECT id FROM clinics ORDER BY created_at ASC LIMIT 1)
+      WHERE p.clinic_id IS NULL;
+    `);
+    logger.info('Backfilled all missing patient clinic_ids');
     
   } catch (error) {
     console.error('🔥 FATAL MIGRATION ERROR:', error);

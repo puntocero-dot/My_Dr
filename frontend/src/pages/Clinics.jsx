@@ -67,12 +67,15 @@ export default function Clinics() {
                 <div className="w-12 h-12 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
                   <Building2 className="h-6 w-6 text-primary-600" />
                 </div>
-                <button
-                  onClick={() => { setEditingClinic(clinic); setShowModal(true) }}
-                  className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setEditingClinic(clinic); setShowModal(true) }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-xl transition-all border border-blue-100 dark:border-blue-800"
+                  >
+                    <Palette className="h-4 w-4" />
+                    Configurar
+                  </button>
+                </div>
               </div>
 
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
