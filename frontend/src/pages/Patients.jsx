@@ -30,7 +30,7 @@ export default function Patients() {
   const fetchClinicsAndDoctors = async () => {
     try {
       const [clinicsRes, doctorsRes] = await Promise.all([
-        api.get('/settings/clinics'),
+        api.get('/clinics'),
         api.get('/users/role/doctors')
       ])
       setClinics(clinicsRes.data)
