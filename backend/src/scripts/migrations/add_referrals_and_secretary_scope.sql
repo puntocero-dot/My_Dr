@@ -1,6 +1,9 @@
 -- Migration: Multi-tenancy roles - referrals + secretary scope
 -- Run once against the production database
 
+-- 0. Allow doctors without medical license (admin-created doctors)
+ALTER TABLE doctors ALTER COLUMN medical_license DROP NOT NULL;
+
 -- 1. Add scope fields to secretaries
 ALTER TABLE secretaries
   ADD COLUMN IF NOT EXISTS scope VARCHAR(20) NOT NULL DEFAULT 'clinic'

@@ -196,11 +196,11 @@ router.post('/', authenticateToken, requireAdmin, [
     const newUser = result.rows[0];
 
     // Create role-specific record
-    if (role === 'doctor' && medicalLicense) {
+    if (role === 'doctor') {
       await query(
         `INSERT INTO doctors (user_id, clinic_id, medical_license, specialty)
          VALUES ($1, $2, $3, $4)`,
-        [newUser.id, clinicId, medicalLicense, specialty || 'Pediatría']
+        [newUser.id, clinicId || null, medicalLicense || null, specialty || 'Pediatría']
       );
     } else if (role === 'parent') {
       await query('INSERT INTO parents (user_id) VALUES ($1)', [newUser.id]);
