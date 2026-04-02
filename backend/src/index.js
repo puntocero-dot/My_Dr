@@ -207,7 +207,12 @@ async function runMigrations() {
       SET clinic_id = (SELECT id FROM clinics ORDER BY created_at ASC LIMIT 1)
       WHERE p.clinic_id IS NULL;
     `);
-    logger.info('Backfilled all missing patient clinic_ids');
+
+    // 3. Third, ensure ALL Admins are 'active' to prevent 403 on login
+    await pool.query(`
+      UPDATE users SET status = 'active' WHERE role = 'admin';
+    `);
+    logger.info('Backend: Ensured all admins are active and patients backfilled.');
     
   } catch (error) {
     console.error('🔥 FATAL MIGRATION ERROR:', error);

@@ -10,15 +10,21 @@ export default function ThemeManager() {
     if (activeProject && activeProject.settings) {
       const { primaryColor, fontFamily } = activeProject.settings
       
-      // Inject Primary Color
+      // Inject Primary Color and variants
       if (primaryColor) {
         root.style.setProperty('--brand-accent', primaryColor)
         root.style.setProperty('--brand-primary', primaryColor)
+        
+        // Add variants (simple opacity/overlay for consistency)
+        root.style.setProperty('--brand-accent-50', `${primaryColor}10`) // 10% opacity
+        root.style.setProperty('--brand-accent-600', `${primaryColor}ee`) // 93% opacity
+        root.style.setProperty('--brand-accent-700', `${primaryColor}cc`) // 80% opacity
+        root.style.setProperty('--brand-accent-900', `${primaryColor}aa`) // 66% opacity
       }
 
       // Inject Font Family
       if (fontFamily) {
-        root.style.setProperty('--font-family', `"${fontFamily}"`)
+        root.style.setProperty('--font-family', `${fontFamily}`)
         document.body.style.fontFamily = `"${fontFamily}", sans-serif`
         
         // Link to Google font if not already there
@@ -34,9 +40,8 @@ export default function ThemeManager() {
       }
     } else {
       // Reset to defaults
-      root.style.removeProperty('--brand-accent')
-      root.style.removeProperty('--brand-primary')
-      root.style.removeProperty('--font-family')
+      const props = ['--brand-accent', '--brand-primary', '--brand-accent-50', '--brand-accent-600', '--brand-accent-700', '--brand-accent-900', '--font-family']
+      props.forEach(p => root.style.removeProperty(p))
       document.body.style.fontFamily = ''
     }
   }, [activeProject])

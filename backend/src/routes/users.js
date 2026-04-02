@@ -66,7 +66,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     })));
   } catch (error) {
     logger.error('Get users error:', error);
-    res.status(500).json({ error: 'Error al obtener usuarios: ' + error.message });
+    res.status(400).json({ error: 'Error al obtener usuarios: ' + error.message });
   }
 });
 

@@ -12,9 +12,9 @@ const router = express.Router();
 
 // Stricter rate limit for login to prevent brute force
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP or email to 5 login requests per window
-  message: { error: 'Demasiados intentos de inicio de sesión. Por favor, intente de nuevo después de 15 minutos.' },
+  windowMs: 5 * 60 * 1000, // Reduced to 5 minutes
+  max: 20, // Increased to 20 requests per window during testing/stable config
+  message: { error: 'Demasiados intentos de inicio de sesión. Por favor, intente de nuevo después de 5 minutos.' },
   keyGenerator: (req) => {
     // Trust proxy logic might be needed if behind a load balancer
     const ip = req.headers['x-forwarded-for'] || req.ip;

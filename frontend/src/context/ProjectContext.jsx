@@ -19,12 +19,27 @@ export function ProjectProvider({ children }) {
   }, [isAdmin])
 
   useEffect(() => {
-    if (isAdmin) {
+    if (user && !isAdmin && user.clinicId) {
+      // If doctor/secretary has a clinic assigned, load it automatically
+      fetchSingleProject(user.clinicId)
+    } else if (isAdmin) {
       fetchProjects()
     } else {
       setLoadingProjects(false)
     }
-  }, [isAdmin])
+  }, [user, isAdmin])
+
+  const fetchSingleProject = async (projectId) => {
+    try {
+      setLoadingProjects(true)
+      const response = await api.get(`/clinics/${projectId}`)
+      setActiveProject(response.data)
+    } catch (error) {
+      console.error('Error fetching assigned clinic:', error)
+    } finally {
+      setLoadingProjects(false)
+    }
+  }
 
   const fetchProjects = async () => {
     try {

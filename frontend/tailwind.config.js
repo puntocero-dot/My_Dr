@@ -15,6 +15,13 @@ export default {
           muted: 'var(--brand-muted, #64748b)',
           surface: 'var(--brand-surface, #f8fafc)',
         },
+        primary: {
+          50: 'var(--brand-accent-50, #f0fdf4)',
+          500: 'var(--brand-accent, #10b981)',
+          600: 'var(--brand-accent-600, #059669)',
+          700: 'var(--brand-accent-700, #047857)',
+          900: 'var(--brand-accent-900, #064e3b)',
+        },
         glass: {
           white: 'rgba(255, 255, 255, 0.7)',
           dark: 'rgba(15, 23, 42, 0.7)',
