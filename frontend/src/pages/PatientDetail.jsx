@@ -1118,7 +1118,7 @@ export default function PatientDetail() {
                   <div key={ref.id} className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        Dr. {ref.fromDoctorName} → Dr. {ref.toDoctorName}
+                        Dr. {ref.fromDoctorName} → {ref.toExternalDoctorName ? `Externo: ${ref.toExternalDoctorName}` : `Dr. ${ref.toDoctorName}`}
                       </p>
                       {ref.reason && (
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-0.5 truncate">{ref.reason}</p>
@@ -1390,6 +1390,8 @@ export default function PatientDetail() {
 function ReferralModal({ patientId, patientName, onClose }) {
   const [doctors, setDoctors] = useState([])
   const [toDoctorId, setToDoctorId] = useState('')
+  const [isExternal, setIsExternal] = useState(false)
+  const [externalDoctorName, setExternalDoctorName] = useState('')
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -1403,11 +1405,17 @@ function ReferralModal({ patientId, patientName, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!toDoctorId) return setError('Selecciona un doctor destino')
+    if (!isExternal && !toDoctorId) return setError('Selecciona un doctor destino')
+    if (isExternal && !externalDoctorName) return setError('Escribe el nombre del doctor externo')
     setLoading(true)
     setError('')
     try {
-      await api.post('/referrals', { patientId, toDoctorId, reason })
+      await api.post('/referrals', { 
+        patientId, 
+        toDoctorId: isExternal ? null : toDoctorId, 
+        toExternalDoctorName: isExternal ? externalDoctorName : null,
+        reason 
+      })
       setSuccess(true)
       setTimeout(onClose, 1500)
     } catch (err) {
@@ -1439,24 +1447,53 @@ function ReferralModal({ patientId, patientName, onClose }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Doctor destino
+            <div className="flex items-center gap-2 mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <input 
+                type="checkbox" 
+                id="isExternal" 
+                checked={isExternal} 
+                onChange={(e) => setIsExternal(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="isExternal" className="text-xs font-semibold text-blue-700 dark:text-blue-300 cursor-pointer">
+                Referir a un doctor externo (Fuera de la plataforma)
               </label>
-              <select
-                value={toDoctorId}
-                onChange={e => setToDoctorId(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 dark:text-white text-sm"
-                required
-              >
-                <option value="">Seleccionar doctor...</option>
-                {doctors.map(d => (
-                  <option key={d.doctorId || d.id} value={d.doctorId || d.id}>
-                    Dr. {d.firstName} {d.lastName}{d.specialty ? ` — ${d.specialty}` : ''}
-                  </option>
-                ))}
-              </select>
             </div>
+
+            {isExternal ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nombre del Doctor Externo
+                </label>
+                <input
+                  type="text"
+                  value={externalDoctorName}
+                  onChange={e => setExternalDoctorName(e.target.value)}
+                  placeholder="Ej: Dr. Juan Pérez"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 dark:text-white text-sm"
+                  required
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Doctor destino
+                </label>
+                <select
+                  value={toDoctorId}
+                  onChange={e => setToDoctorId(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 dark:text-white text-sm"
+                  required
+                >
+                  <option value="">Seleccionar doctor...</option>
+                  {doctors.map(d => (
+                    <option key={d.doctorId || d.id} value={d.doctorId || d.id}>
+                      Dr. {d.firstName} {d.lastName}{d.specialty ? ` — ${d.specialty}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1507,8 +1544,17 @@ function EditPatientModal({ patient, onClose, onSuccess }) {
     insurancePolicyNumber: patient?.insurancePolicyNumber || '',
     birthWeightGrams: patient?.birthWeightGrams || '',
     birthHeightCm: patient?.birthHeightCm || '',
-    gestationalWeeks: patient?.gestationalWeeks || ''
+    gestationalWeeks: patient?.gestationalWeeks || '',
+    doctorId: patient?.doctorId || ''
   })
+  const [doctors, setDoctors] = useState([])
+  const { isAdmin } = useAuth()
+
+  useEffect(() => {
+    if (isAdmin) {
+      api.get('/users/role/doctors').then(res => setDoctors(res.data)).catch(() => {})
+    }
+  }, [isAdmin])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -1578,6 +1624,29 @@ function EditPatientModal({ patient, onClose, onSuccess }) {
               />
             </div>
           </div>
+
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Doctor Asignado
+              </label>
+              <select
+                value={formData.doctorId}
+                onChange={(e) => setFormData({ ...formData, doctorId: e.target.value })}
+                className="input-field"
+              >
+                <option value="">Sin asignar</option>
+                {doctors.map(d => (
+                  <option key={d.doctorId || d.id} value={d.doctorId || d.id}>
+                    Dr. {d.firstName} {d.lastName}{d.specialty ? ` — ${d.specialty}` : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-500 mt-1">
+                * Cambiar el doctor también actualizará la clínica asociada del paciente.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>

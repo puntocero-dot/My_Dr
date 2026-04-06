@@ -192,6 +192,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       notes: p.notes,
       parents: p.parents,
       emergencyContacts: p.emergency_contacts,
+      doctorId: p.doctor_id,
       createdAt: p.created_at,
       updatedAt: p.updated_at
     });
@@ -302,7 +303,8 @@ router.put('/:id', authenticateToken, requireMedicalStaff, async (req, res) => {
   const {
     firstName, lastName, dateOfBirth, gender, bloodType, allergies, chronicConditions,
     insuranceProvider, insurancePolicyNumber, notes,
-    birthWeightGrams, birthHeightCm, gestationalWeeks
+    birthWeightGrams, birthHeightCm, gestationalWeeks,
+    doctorId
   } = req.body;
 
   try {
@@ -316,6 +318,26 @@ router.put('/:id', authenticateToken, requireMedicalStaff, async (req, res) => {
       const docRes = await query('SELECT id FROM doctors WHERE user_id = $1', [req.user.id]);
       if (docRes.rows.length === 0 || oldResult.rows[0].doctor_id !== docRes.rows[0].id) {
         return res.status(403).json({ error: 'Access denied: You can only edit your own patients' });
+      }
+    }
+
+    // Admin-only doctor reassignment
+    let assignedDoctorId = undefined;
+    let finalClinicId = undefined;
+
+    if (req.user.role === 'admin') {
+      if (doctorId !== undefined) {
+        assignedDoctorId = doctorId || null;
+        if (assignedDoctorId) {
+          const docRes = await query('SELECT clinic_id FROM doctors WHERE id = $1', [assignedDoctorId]);
+          if (docRes.rows.length > 0) {
+            finalClinicId = docRes.rows[0].clinic_id;
+          }
+        } else {
+          // If explicitly set to null, clinic_id remains as is unless also specified
+          // But usually we don't clear clinic if we clear doctor unless it's a global admin patient?
+          // Let's keep clinic_id if doctor is cleared, unless it's a transition.
+        }
       }
     }
 
@@ -334,12 +356,17 @@ router.put('/:id', authenticateToken, requireMedicalStaff, async (req, res) => {
         birth_weight_grams = COALESCE($11, birth_weight_grams),
         birth_height_cm = COALESCE($12, birth_height_cm),
         gestational_weeks = COALESCE($13, gestational_weeks),
+        doctor_id = CASE WHEN $14 = TRUE THEN $15 ELSE doctor_id END,
+        clinic_id = CASE WHEN $16 = TRUE THEN $17 ELSE clinic_id END,
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $14
+       WHERE id = $18
        RETURNING *`,
       [firstName, lastName, dateOfBirth, gender, bloodType, allergies, chronicConditions,
         insuranceProvider, insurancePolicyNumber, notes,
-        birthWeightGrams, birthHeightCm, gestationalWeeks, req.params.id]
+        birthWeightGrams, birthHeightCm, gestationalWeeks, 
+        doctorId !== undefined && req.user.role === 'admin', assignedDoctorId,
+        finalClinicId !== undefined && req.user.role === 'admin', finalClinicId,
+        req.params.id]
     );
 
     await logAudit(req.user.id, 'UPDATE_PATIENT', 'patients', req.params.id, oldResult.rows[0], result.rows[0], req);

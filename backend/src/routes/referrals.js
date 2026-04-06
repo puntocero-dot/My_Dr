@@ -44,7 +44,8 @@ router.get('/', authenticateToken, async (req, res) => {
              p.first_name as patient_first_name, p.last_name as patient_last_name,
              fu.first_name as from_doctor_first_name, fu.last_name as from_doctor_last_name,
              tu.first_name as to_doctor_first_name, tu.last_name as to_doctor_last_name,
-             au.first_name as authorized_by_first_name, au.last_name as authorized_by_last_name
+             au.first_name as authorized_by_first_name, au.last_name as authorized_by_last_name,
+             r.to_external_doctor_name
       FROM referrals r
       JOIN patients p ON r.patient_id = p.id
       JOIN doctors fd ON r.from_doctor_id = fd.id
@@ -93,6 +94,7 @@ router.get('/', authenticateToken, async (req, res) => {
       reason: r.reason,
       notes: r.notes,
       status: r.status,
+      toExternalDoctorName: r.to_external_doctor_name,
       createdAt: r.created_at
     })));
   } catch (error) {
@@ -104,13 +106,14 @@ router.get('/', authenticateToken, async (req, res) => {
 // POST /api/referrals — doctor or secretary creates a referral
 router.post('/', authenticateToken, [
   body('patientId').isUUID(),
-  body('toDoctorId').isUUID(),
+  body('toDoctorId').optional({ nullable: true }).isUUID(),
+  body('toExternalDoctorName').optional().trim(),
   body('reason').optional().trim()
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { patientId, toDoctorId, reason, notes } = req.body;
+  const { patientId, toDoctorId, toExternalDoctorName, reason, notes } = req.body;
 
   try {
     let fromDoctorId;
@@ -156,10 +159,10 @@ router.post('/', authenticateToken, [
     }
 
     const result = await query(
-      `INSERT INTO referrals (patient_id, from_doctor_id, to_doctor_id, authorized_by, reason, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO referrals (patient_id, from_doctor_id, to_doctor_id, to_external_doctor_name, authorized_by, reason, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [patientId, fromDoctorId, toDoctorId, req.user.id, reason || null, notes || null]
+      [patientId, fromDoctorId, toDoctorId || null, toExternalDoctorName || null, req.user.id, reason || null, notes || null]
     );
 
     await logAudit(req.user.id, 'CREATE_REFERRAL', 'referrals', result.rows[0].id, null,
