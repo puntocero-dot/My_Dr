@@ -12,7 +12,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [branding, setBranding] = useState({ name: 'My_Dr', logoUrl: null, loginBgUrl: null, primaryColor: null })
+  const [branding, setBranding] = useState({ name: 'My_Dr', logoUrl: null, loginBgUrl: null, loginBgPosition: 'top center', primaryColor: null })
   const { login } = useAuth()
   const navigate = useNavigate()
 
@@ -42,6 +42,7 @@ export default function Login() {
   }
 
   const bgImage = branding.loginBgUrl || DEFAULT_BG
+  const bgPosition = branding.loginBgPosition || 'top center'
   const accentColor = branding.primaryColor || '#06b6d4'
 
   return (
@@ -50,7 +51,7 @@ export default function Login() {
       style={{
         backgroundImage: `url(${bgImage})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: bgPosition,
       }}
     >
       {/* Overlay */}

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import {
-  Building2, Plus, Edit, Users, Calendar, X,
-  Phone, Mail, MapPin, Palette, Layout, Type, Upload, ImagePlus
+  Building2, Plus, X,
+  Phone, Mail, MapPin, Palette, Layout, Upload, ImagePlus, Monitor
 } from 'lucide-react'
 
 export default function Clinics() {
@@ -177,11 +177,14 @@ function ClinicModal({ clinic, onClose, onSuccess }) {
     settings: clinic?.settings || {
       primaryColor: '#0ea5e9',
       fontFamily: 'Inter',
+      loginBgPosition: 'top center',
       enabledModules: ['dashboard', 'patients', 'appointments', 'vaccinations', 'documents', 'lab_exams', 'ai_assistant']
     }
   })
   const [logoFile, setLogoFile] = useState(null)
   const [logoPreview, setLogoPreview] = useState(clinic?.logoUrl || '')
+  const [loginBgFile, setLoginBgFile] = useState(null)
+  const [loginBgPreview, setLoginBgPreview] = useState(clinic?.settings?.loginBgUrl || '')
 
   const modules = [
     { id: 'dashboard', name: 'Dashboard' },
@@ -216,10 +219,33 @@ function ClinicModal({ clinic, onClose, onSuccess }) {
         return
       }
       setLogoFile(file)
-      const url = URL.createObjectURL(file)
-      setLogoPreview(url)
+      setLogoPreview(URL.createObjectURL(file))
     }
   }
+
+  const handleLoginBgChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('La imagen de fondo no debe superar los 10MB')
+        return
+      }
+      setLoginBgFile(file)
+      setLoginBgPreview(URL.createObjectURL(file))
+    }
+  }
+
+  const BG_POSITIONS = [
+    { label: '↖', value: 'top left' },
+    { label: '↑', value: 'top center' },
+    { label: '↗', value: 'top right' },
+    { label: '←', value: 'center left' },
+    { label: '·', value: 'center' },
+    { label: '→', value: 'center right' },
+    { label: '↙', value: 'bottom left' },
+    { label: '↓', value: 'bottom center' },
+    { label: '↘', value: 'bottom right' },
+  ]
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -233,12 +259,14 @@ function ClinicModal({ clinic, onClose, onSuccess }) {
       if (formData.phone) data.append('phone', formData.phone)
       if (formData.email) data.append('email', formData.email)
       
-      // Enviar la URL existente si no hay archivo nuevo (reusing existing)
       if (!logoFile && formData.logoUrl) {
-         data.append('logoUrl', formData.logoUrl)
+        data.append('logoUrl', formData.logoUrl)
       }
       if (logoFile) {
         data.append('logo', logoFile)
+      }
+      if (loginBgFile) {
+        data.append('loginBg', loginBgFile)
       }
 
       data.append('settings', JSON.stringify(formData.settings))
@@ -399,6 +427,74 @@ function ClinicModal({ clinic, onClose, onSuccess }) {
                    <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, WebP o SVG. Máx 5MB.</p>
                  </div>
                </div>
+            </div>
+          </div>
+
+          {/* Login Background */}
+          <div className="space-y-4 border-t border-gray-100 dark:border-gray-700 pt-6">
+            <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2 uppercase tracking-wide">
+              <Monitor className="h-4 w-4 text-primary-600" />
+              Fondo de Pantalla de Login
+            </h3>
+
+            <div className="flex gap-4">
+              {/* Preview */}
+              <div
+                className="w-28 h-20 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-700"
+                style={loginBgPreview ? {
+                  backgroundImage: `url(${loginBgPreview})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: formData.settings.loginBgPosition || 'top center',
+                  borderStyle: 'solid',
+                } : {}}
+              >
+                {!loginBgPreview && (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImagePlus className="h-6 w-6 text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <label className="flex items-center justify-center w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <Upload className="h-4 w-4 mr-2 text-gray-500" />
+                  <span className="text-sm font-bold text-gray-600 dark:text-gray-300">
+                    {loginBgFile ? loginBgFile.name : loginBgPreview ? 'Cambiar imagen...' : 'Subir imagen...'}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                    onChange={handleLoginBgChange}
+                  />
+                </label>
+                <p className="text-[10px] text-gray-400">PNG, JPG o WebP. Máx 10MB. Recomendado: 1920×1080.</p>
+
+                {/* Position grid */}
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Posición del foco</p>
+                  <div className="grid grid-cols-3 gap-1 w-24">
+                    {BG_POSITIONS.map(pos => (
+                      <button
+                        key={pos.value}
+                        type="button"
+                        onClick={() => setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, loginBgPosition: pos.value }
+                        })}
+                        className={`h-7 w-7 rounded-lg text-sm font-bold flex items-center justify-center transition-all ${
+                          (formData.settings.loginBgPosition || 'top center') === pos.value
+                            ? 'bg-primary-600 text-white shadow-md'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                        title={pos.value}
+                      >
+                        {pos.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

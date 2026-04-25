@@ -20,13 +20,14 @@ const storage = multerS3({
   key: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = path.extname(file.originalname);
-    cb(null, `clinics/logos/${uniqueSuffix}${extension}`);
+    const folder = file.fieldname === 'loginBg' ? 'clinics/login-bg' : 'clinics/logos';
+    cb(null, `${folder}/${uniqueSuffix}${extension}`);
   }
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for logos
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -36,6 +37,11 @@ const upload = multer({
     }
   }
 });
+
+const uploadFields = upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'loginBg', maxCount: 1 }
+]);
 
 // Get all clinics
 router.get('/', authenticateToken, async (req, res) => {
@@ -69,18 +75,19 @@ router.get('/public/branding', async (req, res) => {
       result = await query('SELECT name, logo_url, settings FROM clinics ORDER BY created_at ASC LIMIT 1');
     }
     if (result.rows.length === 0) {
-      return res.json({ name: 'My_Dr', logoUrl: null, loginBgUrl: null, primaryColor: null });
+      return res.json({ name: 'My_Dr', logoUrl: null, loginBgUrl: null, loginBgPosition: 'top center', primaryColor: null });
     }
     const c = result.rows[0];
     res.json({
       name: c.name,
       logoUrl: c.logo_url || null,
       loginBgUrl: c.settings?.loginBgUrl || null,
+      loginBgPosition: c.settings?.loginBgPosition || 'top center',
       primaryColor: c.settings?.primaryColor || null
     });
   } catch (error) {
     logger.error('Get branding error:', error);
-    res.json({ name: 'My_Dr', logoUrl: null, loginBgUrl: null, primaryColor: null });
+    res.json({ name: 'My_Dr', logoUrl: null, loginBgUrl: null, loginBgPosition: 'top center', primaryColor: null });
   }
 });
 
@@ -112,7 +119,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create clinic (admin only)
-router.post('/', authenticateToken, requireAdmin, upload.single('logo'), [
+router.post('/', authenticateToken, requireAdmin, uploadFields, [
   body('name').notEmpty().trim()
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -122,7 +129,7 @@ router.post('/', authenticateToken, requireAdmin, upload.single('logo'), [
 
   const { name, address, phone, email } = req.body;
   let { settings, logoUrl } = req.body;
-  
+
   if (typeof settings === 'string') {
     try {
       settings = JSON.parse(settings);
@@ -131,9 +138,13 @@ router.post('/', authenticateToken, requireAdmin, upload.single('logo'), [
     }
   }
 
-  // Handle uploaded logo
-  if (req.file) {
-    logoUrl = `${R2_PUBLIC_URL}/${req.file.key}`;
+  // Handle uploaded files
+  if (req.files?.logo?.[0]) {
+    logoUrl = `${R2_PUBLIC_URL}/${req.files.logo[0].key}`;
+  }
+  if (req.files?.loginBg?.[0]) {
+    settings = settings || {};
+    settings.loginBgUrl = `${R2_PUBLIC_URL}/${req.files.loginBg[0].key}`;
   }
 
   try {
@@ -157,7 +168,7 @@ router.post('/', authenticateToken, requireAdmin, upload.single('logo'), [
 });
 
 // Update clinic
-router.put('/:id', authenticateToken, requireAdmin, upload.single('logo'), async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, uploadFields, async (req, res) => {
   const { name, address, phone, email } = req.body;
   let { settings, logoUrl } = req.body;
 
@@ -165,13 +176,17 @@ router.put('/:id', authenticateToken, requireAdmin, upload.single('logo'), async
     try {
       settings = JSON.parse(settings);
     } catch (e) {
-      // keep it if it fails or ignore
+      settings = {};
     }
   }
 
-  // Handle uploaded logo
-  if (req.file) {
-    logoUrl = `${R2_PUBLIC_URL}/${req.file.key}`;
+  // Handle uploaded files
+  if (req.files?.logo?.[0]) {
+    logoUrl = `${R2_PUBLIC_URL}/${req.files.logo[0].key}`;
+  }
+  if (req.files?.loginBg?.[0]) {
+    settings = settings || {};
+    settings.loginBgUrl = `${R2_PUBLIC_URL}/${req.files.loginBg[0].key}`;
   }
 
   try {
