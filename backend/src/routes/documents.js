@@ -7,7 +7,7 @@ const { logAudit } = require('../middleware/audit');
 const { Resend } = require('resend');
 const logger = require('../config/logger');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'My Dr <noreply@mydr.com>';
 
 const router = express.Router();
@@ -329,7 +329,7 @@ router.post('/:id/email', authenticateToken, requireMedicalStaff, [
       return res.status(503).json({ error: 'Email service not configured' });
     }
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_EMAIL,
       to: [to],
       subject: `${d.title || 'Documento Médico'} — ${patientName}`,
